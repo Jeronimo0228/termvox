@@ -45,6 +45,11 @@ pub(crate) fn init_config(global: bool, force: bool, interactive: bool) -> Resul
         };
         let agent = prompt_default("Agent (codex/claude/cursor/gemini/aider/amp)", "codex")?;
         config.agent = parse_agent(&agent)?;
+        if config.agent == AgentKind::Cursor
+            && confirm_yes_no("Trust this project directory for Cursor CLI non-interactive runs?")?
+        {
+            config.agents.cursor.trust_workspace = true;
+        }
     }
     let text = toml::to_string_pretty(&config)?;
     std::fs::write(&path, text)?;
@@ -56,6 +61,19 @@ pub(crate) fn global_config_path() -> PathBuf {
     dirs::config_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("termvox/termvox.toml")
+}
+
+fn prompt_default(label: &str, default: &str) -> Result<String> {
+    print!("{label} [{default}]: ");
+    io::stdout().flush()?;
+    let mut value = String::new();
+    io::stdin().read_line(&mut value)?;
+    let value = value.trim();
+    Ok(if value.is_empty() {
+        default.to_owned()
+    } else {
+        value.to_owned()
+    })
 }
 
 fn parse_agent(value: &str) -> Result<AgentKind> {
@@ -70,15 +88,10 @@ fn parse_agent(value: &str) -> Result<AgentKind> {
     }
 }
 
-fn prompt_default(label: &str, default: &str) -> Result<String> {
-    print!("{label} [{default}]: ");
+fn confirm_yes_no(message: &str) -> Result<bool> {
+    print!("{message} [y/N]: ");
     io::stdout().flush()?;
-    let mut value = String::new();
-    io::stdin().read_line(&mut value)?;
-    let value = value.trim();
-    Ok(if value.is_empty() {
-        default.to_owned()
-    } else {
-        value.to_owned()
-    })
+    let mut answer = String::new();
+    io::stdin().read_line(&mut answer)?;
+    Ok(matches!(answer.trim().to_lowercase().as_str(), "y" | "yes"))
 }

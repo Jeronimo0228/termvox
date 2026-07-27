@@ -1,6 +1,6 @@
 use anyhow::Result;
 use termvox_audio::input_devices;
-use termvox_core::{AgentAdapter, AppConfig, SpeechEngineKind};
+use termvox_core::{AgentAdapter, AppConfig, SpeechEngineKind, agent_config_warnings, agent_hints};
 use termvox_hotkeys::detect_support;
 
 use crate::runtime::{all_agents, speech_engine};
@@ -45,6 +45,30 @@ pub(crate) async fn run(config: AppConfig, json: bool) -> Result<()> {
         } else {
             println!("[--] agent/{:<10} not installed", info.id);
         }
+    }
+    println!("\nSelected agent: {}", config.agent.id());
+    let profile = config.agents.profile(config.agent);
+    if profile.executable.is_some() || profile.trust_workspace || !profile.extra_args.is_empty() {
+        println!("Active profile ([agents.{}]):", config.agent.id());
+        if let Some(executable) = &profile.executable {
+            println!("  executable = {executable}");
+        }
+        if profile.trust_workspace {
+            println!("  trust_workspace = true");
+        }
+        if !profile.extra_args.is_empty() {
+            println!("  extra_args = {:?}", profile.extra_args);
+        }
+    }
+    println!(
+        "  display = {}",
+        profile.resolved_display(config.agent).as_str()
+    );
+    for warning in agent_config_warnings(&config) {
+        println!("[!!] {warning}");
+    }
+    for hint in agent_hints(config.agent) {
+        println!("  hint: {hint}");
     }
     println!(
         "\nTerminal PTT: {}. Global hotkeys are optional and platform-specific.",

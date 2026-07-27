@@ -47,6 +47,9 @@ pub struct TranscriptionOptions {
 pub trait SpeechEngine: Send + Sync {
     fn id(&self) -> &'static str;
     async fn healthcheck(&self) -> Result<()>;
+    async fn prewarm(&self) -> Result<()> {
+        Ok(())
+    }
     async fn transcribe(
         &self,
         audio: AudioBuffer,

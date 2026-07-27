@@ -25,6 +25,18 @@ max_json_frame_bytes = 1048576
 model = "/home/you/.local/share/termvox/models/ggml-base.bin"
 threads = 0
 
+[cursor]
+# Deprecated: use [agents.cursor]. Kept for backward-compatible loading.
+trust_workspace = false
+
+[agents.cursor]
+# Required for non-interactive Cursor CLI runs in a trusted project directory.
+trust_workspace = false
+
+[agents.codex]
+# executable = "/usr/local/bin/codex"
+# extra_args = []
+
 [openai]
 api_key_env = "OPENAI_API_KEY"
 model = "gpt-4o-mini-transcribe"

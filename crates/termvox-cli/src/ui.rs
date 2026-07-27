@@ -5,7 +5,7 @@ use crossterm::{
     event::KeyCode,
     terminal::{disable_raw_mode, enable_raw_mode},
 };
-use termvox_core::AgentEvent;
+use termvox_core::{AgentEvent, AgentUiTheme};
 
 pub(crate) fn confirm(message: &str) -> Result<bool> {
     print!("{message}");
@@ -15,13 +15,29 @@ pub(crate) fn confirm(message: &str) -> Result<bool> {
     Ok(matches!(answer.trim().to_lowercase().as_str(), "y" | "yes"))
 }
 
-pub(crate) fn print_agent_event(event: &AgentEvent) {
+pub(crate) fn print_agent_event(event: &AgentEvent, theme: Option<&AgentUiTheme>) {
     match event {
         AgentEvent::Message { text } | AgentEvent::Completed { result: text } => {
-            println!("{text}");
+            if let Some(theme) = theme {
+                println!(
+                    "{}{}{} {text}",
+                    theme.accent, theme.prompt_glyph, theme.reset
+                );
+            } else {
+                println!("{text}");
+            }
         }
         AgentEvent::Failed { message } => eprintln!("Agent failed: {message}"),
-        AgentEvent::Tool { name, status } => tracing::info!(%name, %status, "agent tool"),
+        AgentEvent::Tool { name, status } => {
+            if let Some(theme) = theme {
+                eprintln!(
+                    "{}{}{} {name} ({status})",
+                    theme.dim, theme.prompt_glyph, theme.reset
+                );
+            } else {
+                eprintln!("tool {name} ({status})");
+            }
+        }
         AgentEvent::Started { .. } => {}
     }
 }

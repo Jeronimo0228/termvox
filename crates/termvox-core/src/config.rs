@@ -6,7 +6,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Result, TermVoxError};
+use crate::{AgentsConfig, LegacyCursorConfig, Result, TermVoxError};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -18,7 +18,7 @@ pub enum SpeechEngineKind {
     Vosk,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum AgentKind {
     Codex,
@@ -82,10 +82,14 @@ pub struct AppConfig {
     pub runtime: RuntimeLimits,
     pub whisper: WhisperConfig,
     pub openai: OpenAiConfig,
+    pub agents: AgentsConfig,
     pub parakeet: SidecarSpeechConfig,
     pub vosk: SidecarSpeechConfig,
     pub plugins: Vec<PluginConfig>,
     pub pipeline: PipelineConfig,
+    /// Deprecated: use `[agents.cursor]`. Kept for backward-compatible loading only.
+    #[serde(default, skip_serializing)]
+    cursor: Option<LegacyCursorConfig>,
 }
 
 impl Default for AppConfig {
@@ -103,10 +107,12 @@ impl Default for AppConfig {
             runtime: RuntimeLimits::default(),
             whisper: WhisperConfig::default(),
             openai: OpenAiConfig::default(),
+            agents: AgentsConfig::default(),
             parakeet: SidecarSpeechConfig::parakeet_default(),
             vosk: SidecarSpeechConfig::vosk_default(),
             plugins: Vec::new(),
             pipeline: PipelineConfig::default(),
+            cursor: None,
         }
     }
 }
@@ -253,9 +259,19 @@ impl AppConfig {
             }
         }
         apply_env(&mut merged);
-        merged
+        let mut config: AppConfig = merged
             .try_into()
-            .map_err(|error| TermVoxError::Config(error.to_string()))
+            .map_err(|error| TermVoxError::Config(error.to_string()))?;
+        config.normalize_legacy();
+        Ok(config)
+    }
+
+    fn normalize_legacy(&mut self) {
+        if let Some(legacy) = self.cursor.take() {
+            if legacy.trust_workspace {
+                self.agents.cursor.trust_workspace = true;
+            }
+        }
     }
 
     /// Validates all bounded runtime and provider settings.
@@ -375,5 +391,23 @@ mod tests {
         let serialized = toml::to_string(&config).unwrap();
         assert!(serialized.contains("speech_engine = \"whisper\""));
         assert!(!serialized.contains("whispercpp"));
+    }
+
+    #[test]
+    fn loads_legacy_cursor_trust_into_agents_profile() {
+        let path =
+            std::env::temp_dir().join(format!("termvox-legacy-cursor-{}.toml", std::process::id()));
+        std::fs::write(
+            &path,
+            r#"
+            agent = "cursor"
+            [cursor]
+            trust_workspace = true
+            "#,
+        )
+        .unwrap();
+        let config = AppConfig::load(None, Some(&path)).unwrap();
+        let _ = std::fs::remove_file(path);
+        assert!(config.agents.cursor.trust_workspace);
     }
 }

@@ -6,7 +6,7 @@ output where available.
 
 ## Compatibility matrix
 
-| Agent | Config value | Expected executable | Status |
+| Agent | Config value | Default executable | Status |
 | --- | --- | --- | --- |
 | Codex CLI | `codex` | `codex` | Built-in adapter |
 | Claude Code | `claude` | `claude` | Built-in adapter |
@@ -15,63 +15,92 @@ output where available.
 | Aider | `aider` | `aider` | Built-in text adapter |
 | Amp | `amp` | `amp` | Built-in adapter |
 
-“Built-in adapter” means invocation and output parsing exist in source. It is
-not a guarantee of compatibility with every upstream CLI version. These tools
-evolve independently, and TermVox has not published a version-by-version test
-matrix.
-
 ## Selecting an agent
 
 Set the top-level `agent` key:
 
 ```toml
-agent = "codex" # claude, cursor, gemini, aider, or amp
+agent = "cursor"
 ```
 
-For a one-off environment override:
+Configure only the active agent's profile under `[agents.<name>]`:
 
-```bash
-TERMVOX_AGENT=cursor termvox doctor
+```toml
+[agents.cursor]
+executable = "/home/you/.local/bin/agent"
+trust_workspace = true
+extra_args = []
+
+[agents.claude]
+# optional executable override or documented extra flags
+
+[agents.codex]
+extra_args = []
 ```
 
-`termvox doctor` probes all six current executables with `--version`.
-`termvox plugins` prints the same adapter availability at a glance.
+| Field | Applies to | Meaning |
+| --- | --- | --- |
+| `executable` | All agents | Override the default CLI command or path |
+| `extra_args` | All agents | Documented upstream flags inserted before the prompt |
+| `trust_workspace` | Cursor only | Pass `-f` for non-interactive workspace trust |
+| `display` | Any agent | `branded` (default), `companion`, or `verbose` |
+| `copy_to_clipboard` | Any agent | Auto-copy the prompt in companion mode (default: on for companion) |
+
+### Display modes
+
+| Mode | Behavior |
+| --- | --- |
+| `branded` | Compact footer styled like the upstream CLI; spawns the agent subprocess |
+| `companion` | Voice layer only — transcribe, copy to clipboard, and paste into an external agent TUI (default for Cursor) |
+| `verbose` | Legacy multi-line TermVox output |
+
+```toml
+[agents.cursor]
+trust_workspace = true
+display = "companion"   # paste into the Cursor Agent TUI in another pane
+
+[agents.codex]
+display = "branded"
+```
+
+TermVox never adds undocumented auto-approval flags such as `--yolo` or
+`--dangerously`. Use `extra_args` only for flags published by the upstream CLI.
+
+Legacy `[cursor].trust_workspace` is still loaded and mapped to
+`[agents.cursor].trust_workspace`.
+
+Run `termvox doctor` to see the selected agent, active profile values, warnings,
+and agent-specific hints.
 
 ## Current invocation behavior
 
 - **Codex CLI:** `codex exec [resume ID] --json PROMPT`
 - **Claude Code:** `claude -p PROMPT --output-format stream-json --verbose`
-  with `--resume ID` when a remote session ID is known
-- **Cursor CLI:** `agent -p PROMPT --output-format stream-json` with
-  `--resume ID` when available
-- **Gemini CLI:** `gemini -p PROMPT --output-format stream-json` with
-  `--resume ID` when available
-- **Aider:** `aider --message PROMPT`; plain output is emitted as message events
-- **Amp:** `amp -x PROMPT --stream-json` with `--resume ID` when available
+- **Cursor CLI:** `agent [extra_args...] -p PROMPT --output-format stream-json [-f]`
+- **Gemini CLI:** `gemini -p PROMPT --output-format stream-json`
+- **Aider:** `aider --message PROMPT`
+- **Amp:** `amp -x PROMPT --stream-json`
 
-Cursor is currently invoked without an explicit TermVox sandbox flag; its
-effective policy comes from the installed Cursor CLI and environment.
+Resume arguments are added automatically when a remote session ID is known.
 
-These details may change as upstream tools change. TermVox does not add
-`--force`, `--yolo`, or automatic approval flags. The `permission_profile`
-setting is carried through the request, but non-safe values are not translated
-to undocumented agent flags. The invoked agent still controls authentication,
-sandboxing, permissions, tool policy, and side effects.
+## Common agent-specific issues
 
-`termvox start` creates one local session and reuses it across utterances until
-exit. Structured adapters can capture a remote session ID and add their
-documented resume argument to later requests. The external `termvox record`
-workflow creates a session for each recording process.
+| Agent | Typical non-interactive failure | TermVox setting |
+| --- | --- | --- |
+| Cursor | Workspace trust required | `agents.cursor.trust_workspace = true` |
+| Claude | Not authenticated | Run `claude login` in the same environment |
+| Codex | Not authenticated | Complete Codex CLI login first |
+| Gemini | Not authenticated | Complete Gemini CLI auth setup first |
+| Any on Wayland | Push-to-talk never transcribes | Use `termvox start --toggle` |
 
 ## Compatibility caveats
 
 - Aider has no structured-output or resume capability in the current adapter.
-- The other adapters use a generic forward-compatible JSONL parser; upstream
-  event shapes can still lead to missing or misclassified output.
+- Structured adapters use a forward-compatible JSONL parser; upstream event shapes
+  can still change without notice.
 - Agent execution is bounded by runtime timeout, total output, and per-frame
   limits from configuration.
-- Built-in executable paths are fixed command names and are not configurable.
 
-An out-of-process [plugin protocol](plugin-system.md) is also under
-development. Configured plugins can be listed, inspected, and conformance
-tested, but they are not selectable as the `termvox start` coding agent.
+An out-of-process [plugin protocol](plugin-system.md) is also under development.
+Configured plugins can be listed, inspected, and conformance tested, but they are
+not selectable as the `termvox start` coding agent.

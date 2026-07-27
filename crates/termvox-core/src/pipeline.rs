@@ -35,6 +35,26 @@ impl PromptPipeline {
     }
 }
 
+/// Builds a Whisper `initial_prompt` from explicit dictionary replacements.
+#[must_use]
+pub fn whisper_initial_prompt(config: &PipelineConfig) -> Option<String> {
+    if config.dictionary.is_empty() {
+        return None;
+    }
+    let terms = config
+        .dictionary
+        .values()
+        .chain(config.dictionary.keys())
+        .map(|term| term.trim())
+        .filter(|term| !term.is_empty())
+        .collect::<Vec<_>>();
+    if terms.is_empty() {
+        None
+    } else {
+        Some(terms.join(", "))
+    }
+}
+
 struct WhitespaceStage;
 
 impl PromptStage for WhitespaceStage {
@@ -97,5 +117,19 @@ mod tests {
         };
         let output = PromptPipeline::from_config(&config).process("  crea   api rest ");
         assert_eq!(output, "Project context\n\ncrea REST API");
+    }
+
+    #[test]
+    fn whisper_initial_prompt_collects_dictionary_terms() {
+        let config = PipelineConfig {
+            dictionary: BTreeMap::from([
+                ("api rest".into(), "REST API".into()),
+                ("j w t".into(), "JWT".into()),
+            ]),
+            ..PipelineConfig::default()
+        };
+        let prompt = whisper_initial_prompt(&config).expect("terms");
+        assert!(prompt.contains("REST API"));
+        assert!(prompt.contains("JWT"));
     }
 }
