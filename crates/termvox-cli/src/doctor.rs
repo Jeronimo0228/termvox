@@ -47,6 +47,22 @@ pub(crate) async fn run(config: AppConfig, json: bool) -> Result<()> {
         }
     }
     println!("\nSelected agent: {}", config.agent.id());
+    println!(
+        "  performance_profile = {}",
+        config.performance_profile.as_str()
+    );
+    if config.speech_engine == SpeechEngineKind::WhisperCpp {
+        println!(
+            "  whisper.model = {} ({})",
+            config.whisper.model.display(),
+            config
+                .whisper
+                .model
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("model")
+        );
+    }
     let profile = config.agents.profile(config.agent);
     if profile.executable.is_some() || profile.trust_workspace || !profile.extra_args.is_empty() {
         println!("Active profile ([agents.{}]):", config.agent.id());

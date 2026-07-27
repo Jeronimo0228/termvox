@@ -172,7 +172,10 @@ fn transcribe_embedded(
 
     let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
     let threads = if config.threads == 0 {
-        std::thread::available_parallelism().map_or(4, std::num::NonZeroUsize::get)
+        std::thread::available_parallelism()
+            .map(std::num::NonZeroUsize::get)
+            .unwrap_or(4)
+            .min(config.max_threads.max(1))
     } else {
         config.threads
     };
@@ -181,6 +184,11 @@ fn transcribe_embedded(
     params.set_print_realtime(false);
     params.set_print_timestamps(false);
     params.set_translate(false);
+    if config.optimize_for_latency {
+        params.set_no_context(true);
+        params.set_single_segment(true);
+        params.set_max_len(0);
+    }
     params.set_language(
         options
             .language
@@ -809,7 +817,7 @@ mod tests {
     async fn embedded_whisper_reports_missing_model_actionably() {
         let engine = EmbeddedWhisperEngine::new(WhisperConfig {
             model: PathBuf::from("definitely-missing-model.bin"),
-            threads: 0,
+            ..WhisperConfig::default()
         });
         let error = engine.healthcheck().await.unwrap_err();
         assert!(error.to_string().contains("termvox models install default"));
@@ -823,7 +831,7 @@ mod tests {
         let result = transcribe_embedded(
             &WhisperConfig {
                 model: PathBuf::from("not-loaded.bin"),
-                threads: 0,
+                ..WhisperConfig::default()
             },
             &Mutex::new(None),
             &AudioBuffer {

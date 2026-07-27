@@ -12,7 +12,7 @@
 use std::{
     sync::{
         Arc, Mutex,
-        atomic::{AtomicU64, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
     },
     time::Duration,
 };
@@ -44,6 +44,7 @@ pub struct AudioRecorder {
     source_rate: u32,
     target_rate: u32,
     dropped_frames: Arc<AtomicU64>,
+    auto_stop_triggered: Arc<AtomicBool>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -65,16 +66,26 @@ impl AudioRecorder {
         let source_rate = stream_config.sample_rate;
         let (tx, mut rx) = mpsc::channel::<Vec<f32>>(FRAME_CHANNEL_CAPACITY);
         let dropped_frames = Arc::new(AtomicU64::new(0));
+        let auto_stop_triggered = Arc::new(AtomicBool::new(false));
         let frame_pool = Arc::new(ArrayQueue::new(FRAME_CHANNEL_CAPACITY + 1));
         for _ in 0..=FRAME_CHANNEL_CAPACITY {
             let _ = frame_pool.push(Vec::with_capacity(MAX_CALLBACK_SAMPLES));
         }
         let max_samples = config.max_seconds as usize * source_rate as usize;
-        let samples = Arc::new(Mutex::new(Vec::with_capacity(max_samples.min(1_920_000))));
+        let samples = Arc::new(Mutex::new(Vec::with_capacity(max_samples.min(480_000))));
         let collected = Arc::clone(&samples);
         let cancel = CancellationToken::new();
         let collector_cancel = cancel.clone();
         let collector_pool = Arc::clone(&frame_pool);
+        let live_vad = config.auto_stop_on_silence.then(|| {
+            Arc::new(Mutex::new(VadStateMachine::new(
+                config.vad_threshold_db,
+                config.vad_silence_ms,
+                20,
+            )))
+        });
+        let live_vad_for_callback = live_vad.clone();
+        let auto_stop_for_callback = Arc::clone(&auto_stop_triggered);
         let collector = tokio::spawn(async move {
             loop {
                 tokio::select! {
@@ -104,6 +115,8 @@ impl AudioRecorder {
                 tx,
                 Arc::clone(&frame_pool),
                 Arc::clone(&dropped),
+                live_vad_for_callback,
+                auto_stop_for_callback,
                 error_callback,
                 |sample: f32| sample,
             ),
@@ -114,6 +127,8 @@ impl AudioRecorder {
                 tx,
                 Arc::clone(&frame_pool),
                 Arc::clone(&dropped),
+                live_vad_for_callback.clone(),
+                Arc::clone(&auto_stop_for_callback),
                 error_callback,
                 |sample: i16| f32::from(sample) / f32::from(i16::MAX),
             ),
@@ -124,6 +139,8 @@ impl AudioRecorder {
                 tx,
                 frame_pool,
                 dropped,
+                live_vad_for_callback,
+                auto_stop_for_callback,
                 error_callback,
                 |sample: u16| (f32::from(sample) / f32::from(u16::MAX)).mul_add(2.0, -1.0),
             ),
@@ -143,7 +160,13 @@ impl AudioRecorder {
             source_rate,
             target_rate: config.sample_rate,
             dropped_frames,
+            auto_stop_triggered,
         })
+    }
+
+    #[must_use]
+    pub fn auto_stop_triggered(&self) -> bool {
+        self.auto_stop_triggered.load(Ordering::Acquire)
     }
 
     #[must_use]
@@ -165,8 +188,9 @@ impl AudioRecorder {
             .map_err(|_| TermVoxError::Audio("audio collector is still active".into()))?
             .into_inner()
             .map_err(|_| TermVoxError::Audio("audio buffer lock was poisoned".into()))?;
+        let resampled = resample_linear(&samples, self.source_rate, self.target_rate);
         Ok(AudioBuffer {
-            samples: resample_linear(&samples, self.source_rate, self.target_rate),
+            samples: resampled,
             sample_rate: self.target_rate,
         })
     }
@@ -220,6 +244,8 @@ fn build_stream<T, E, C>(
     tx: mpsc::Sender<Vec<f32>>,
     frame_pool: Arc<ArrayQueue<Vec<f32>>>,
     dropped_frames: Arc<AtomicU64>,
+    live_vad: Option<Arc<Mutex<VadStateMachine>>>,
+    auto_stop: Arc<AtomicBool>,
     error_callback: E,
     convert: C,
 ) -> Result<Stream>
@@ -246,6 +272,13 @@ where
                 mono.extend(data.chunks(channels).map(|frame| {
                     frame.iter().copied().map(convert).sum::<f32>() / frame.len() as f32
                 }));
+                if let Some(vad) = &live_vad {
+                    if let Ok(mut vad) = vad.lock() {
+                        if vad.process(&mono) == VadDecision::SpeechEnded {
+                            auto_stop.store(true, Ordering::Release);
+                        }
+                    }
+                }
                 if let Err(error) = tx.try_send(mono) {
                     recycle_frame(&frame_pool, error.into_inner());
                     dropped_frames.fetch_add(1, Ordering::Relaxed);

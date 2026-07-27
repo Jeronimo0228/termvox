@@ -30,7 +30,9 @@ use crate::{
 
 pub(crate) async fn test_audio(config: AppConfig, seconds: u64) -> Result<()> {
     let speech = ensure_speech_engine(&config).await?;
-    speech.prewarm().await?;
+    if config.whisper.prewarm_on_start {
+        speech.prewarm().await?;
+    }
     println!("Recording for {seconds} second(s)...");
     let recorder = AudioRecorder::start(&config.audio)?;
     tokio::time::sleep(Duration::from_secs(seconds)).await;
@@ -69,7 +71,7 @@ pub(crate) async fn start(
         );
     }
     let speech = ensure_speech_engine(&config).await?;
-    speech.prewarm().await?;
+    schedule_prewarm(Arc::clone(&speech), &config.whisper);
     let session = agent.start().await?;
     let ui = session_ui(&config, toggle);
     let shutdown = CancellationToken::new();
@@ -82,8 +84,24 @@ pub(crate) async fn start(
     if let Some(shortcut) = global_hotkey {
         let registration = HotkeyRegistration::register(shortcut)?;
         ui.show_global_ready(shortcut);
-        let mut recorder = None;
+        let mut recorder: Option<AudioRecorder> = None;
         while !shutdown.is_cancelled() {
+            if let Some(recorder_ref) = &recorder {
+                if config.audio.auto_stop_on_silence && recorder_ref.auto_stop_triggered() {
+                    let audio = recorder.take().expect("checked above").stop().await?;
+                    process_utterance(
+                        &config,
+                        &ui,
+                        audio,
+                        speech.as_ref(),
+                        agent.as_ref(),
+                        &session,
+                        shutdown.child_token(),
+                    )
+                    .await?;
+                    continue;
+                }
+            }
             if let Some(state) = registration.poll() {
                 match state {
                     TriggerState::Pressed if recorder.is_none() => {
@@ -128,10 +146,35 @@ pub(crate) async fn start(
     let _raw_mode = RawMode::enter()?;
     let ptt_key = parse_key(&config.push_to_talk)?;
     ui.show_startup(info.version.as_deref());
-    let mut recorder = None;
+    let mut recorder: Option<AudioRecorder> = None;
     loop {
         if shutdown.is_cancelled() {
             break;
+        }
+        if let Some(recorder_ref) = &recorder {
+            if config.audio.auto_stop_on_silence && recorder_ref.auto_stop_triggered() {
+                let audio = recorder.take().expect("checked above").stop().await?;
+                if let Err(error) = process_utterance(
+                    &config,
+                    &ui,
+                    audio,
+                    speech.as_ref(),
+                    agent.as_ref(),
+                    &session,
+                    shutdown.child_token(),
+                )
+                .await
+                {
+                    ui.show_error(&error.to_string());
+                }
+                ui.show_idle();
+                continue;
+            }
+        }
+        let ready =
+            tokio::task::spawn_blocking(|| event::poll(Duration::from_millis(50))).await??;
+        if !ready {
+            continue;
         }
         let event = tokio::task::spawn_blocking(event::read).await??;
         let Event::Key(key) = event else { continue };
@@ -286,7 +329,7 @@ pub(crate) async fn record(config: AppConfig, action: RecordAction) -> Result<()
         }
         RecordAction::Start | RecordAction::Toggle => {
             let speech = ensure_speech_engine(&config).await?;
-            speech.prewarm().await?;
+            schedule_prewarm(Arc::clone(&speech), &config.whisper);
             if let Some(parent) = marker.parent() {
                 std::fs::create_dir_all(parent)?;
             }
@@ -336,7 +379,7 @@ async fn ensure_speech_engine(config: &AppConfig) -> Result<Arc<dyn SpeechEngine
             }
             let manifest = ModelManifest::bundled()?;
             let artifact = manifest
-                .find("whisper-base", std::env::consts::OS)
+                .find("whisper-tiny", std::env::consts::OS)
                 .ok_or_else(|| anyhow::anyhow!("reviewed default Whisper model is unavailable"))?;
             if !confirm(&format!(
                 "Download the free local Whisper model ({} MiB) now? [y/N] ",
@@ -428,6 +471,15 @@ pub(crate) fn all_agents() -> [CliAgent; 6] {
         CliAgent::aider(),
         CliAgent::amp(),
     ]
+}
+
+fn schedule_prewarm(speech: Arc<dyn SpeechEngine>, whisper: &termvox_core::WhisperConfig) {
+    if !whisper.prewarm_on_start {
+        return;
+    }
+    tokio::spawn(async move {
+        let _ = speech.prewarm().await;
+    });
 }
 
 fn record_marker() -> PathBuf {
