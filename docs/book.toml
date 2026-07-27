@@ -1,0 +1,17 @@
+[book]
+title = "TermVox Documentation"
+authors = ["TermVox contributors"]
+language = "en"
+src = "."
+
+[build]
+build-dir = "../target/book"
+create-missing = false
+
+[output.html]
+git-repository-url = "https://github.com/Jeronimo0228/termvox"
+edit-url-template = "https://github.com/Jeronimo0228/termvox/edit/main/docs/{path}"
+
+[output.html.fold]
+enable = true
+level = 1

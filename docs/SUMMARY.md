@@ -1,0 +1,18 @@
+# Summary
+
+- [Quick start](quick-start.md)
+- [Installation](installation.md)
+- [Coding agents](agents.md)
+- [Speech engines](speech-engines.md)
+- [Configuration](configuration.md)
+- [CLI reference](cli-reference.md)
+- [Privacy and security](privacy-security.md)
+- [Architecture](architecture.md)
+- [Plugin system](plugin-system.md)
+- [Compatibility](compatibility.md)
+- [Troubleshooting](troubleshooting.md)
+- [FAQ](faq.md)
+- [Roadmap](roadmap.md)
+- [Release readiness](release-readiness.md)
+- [Local validation report](validation-2026-07-27.md)
+- [Inicio rápido (Español)](es/quick-start.md)

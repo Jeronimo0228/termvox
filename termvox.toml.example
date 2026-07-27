@@ -1,0 +1,55 @@
+speech_engine = "whispercpp"
+agent = "codex"
+# Set this to an enabled [[plugins]].id to use a plugin instead of `agent`.
+# agent_plugin = "example"
+push_to_talk = "SPACE"
+language = "es"
+auto_send = false
+confirmation = true
+permission_profile = "safe"
+
+[audio]
+sample_rate = 16000
+max_seconds = 120
+vad_threshold_db = -45.0
+vad_silence_ms = 800
+
+[runtime]
+agent_timeout_seconds = 900
+speech_timeout_seconds = 180
+shutdown_timeout_seconds = 5
+max_output_bytes = 8388608
+max_json_frame_bytes = 1048576
+
+[whisper]
+executable = "whisper-cli"
+model = "/home/you/.local/share/termvox/models/ggml-base.bin"
+
+[openai]
+api_key_env = "OPENAI_API_KEY"
+model = "gpt-4o-mini-transcribe"
+endpoint = "https://api.openai.com/v1/audio/transcriptions"
+timeout_seconds = 180
+max_response_bytes = 2097152
+
+[parakeet]
+executable = "termvox-parakeet"
+model = "/home/you/.local/share/termvox/models/parakeet"
+
+[vosk]
+executable = "termvox-vosk"
+model = "/home/you/.local/share/termvox/models/vosk"
+
+[pipeline]
+# Explicit substitutions only; TermVox never invents requirements.
+dictionary = { "api rest" = "REST API", "j w t" = "JWT" }
+
+# Plugins are explicit out-of-process programs, not in-process sandboxes.
+# [[plugins]]
+# id = "example"
+# executable = "/absolute/path/to/plugin"
+# args = []
+# enabled = true
+# env_allowlist = []
+# timeout_seconds = 30
+# max_frame_bytes = 1048576

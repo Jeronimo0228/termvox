@@ -1,0 +1,8 @@
+# Keep repository automation and supply-chain policy under maintainer review.
+/.github/ @Jeronimo0228
+/scripts/ @Jeronimo0228
+/deny.toml @Jeronimo0228
+/Cargo.lock @Jeronimo0228
+
+# Default owner for all other paths.
+* @Jeronimo0228
