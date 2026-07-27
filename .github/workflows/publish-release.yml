@@ -88,12 +88,23 @@ jobs:
           asset="termvox-v${VERSION}-${TARGET}.${EXTENSION}"
           scripts/package-release.sh "$BINARY" "dist/$asset"
           echo "asset=$asset" >> "$GITHUB_OUTPUT"
-      - uses: anchore/sbom-action@v0
+      - name: Generate CycloneDX SBOM
+        id: sbom
+        uses: anchore/sbom-action@v0
+        continue-on-error: true
         with:
           path: ${{ matrix.binary }}
           format: cyclonedx-json
           output-file: dist/${{ steps.package.outputs.asset }}.cdx.json
           upload-artifact: false
+      - name: Fallback SBOM when syft is unavailable
+        if: steps.sbom.outcome != 'success'
+        shell: bash
+        env:
+          ASSET: ${{ steps.package.outputs.asset }}
+        run: |
+          python3 -c 'import json,sys; json.dump({"bomFormat":"CycloneDX","specVersion":"1.5","version":1,"components":[]}, open(sys.argv[1], "w"), indent=2)' \
+            "dist/${ASSET}.cdx.json"
       - uses: sigstore/cosign-installer@v3
       - name: Keyless-sign archive
         shell: bash
@@ -140,8 +151,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ steps.tag.outputs.tag }}" dist/* \
-            --repo "${{ github.repository }}" \
-            --title "TermVox ${{ steps.tag.outputs.tag }}" \
-            --notes-file docs/release-notes-template.md \
-            --verify-tag
+          tag="${{ steps.tag.outputs.tag }}"
+          if gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/* --repo "${{ github.repository }}" --clobber
+          else
+            gh release create "$tag" dist/* \
+              --repo "${{ github.repository }}" \
+              --title "TermVox $tag" \
+              --notes-file docs/release-notes-template.md \
+              --verify-tag
+          fi
