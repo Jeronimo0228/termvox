@@ -342,8 +342,15 @@ async fn process_utterance(
         return Ok(());
     }
     ui.show_transcribing();
+    let mut options = transcription_options(config);
+    if config.whisper.streaming {
+        let ui_partial = ui.clone();
+        options.on_partial = Some(Arc::new(move |partial| {
+            ui_partial.show_partial_transcript(&partial);
+        }));
+    }
     let transcript = speech
-        .transcribe(audio, &transcription_options(config), cancel.child_token())
+        .transcribe(audio, &options, cancel.child_token())
         .await?;
     let prompt = PromptPipeline::from_config(&config.pipeline).process(&transcript.text);
     let risk = assess_prompt(&prompt);
@@ -369,8 +376,9 @@ async fn process_utterance(
     if ui.mode() == AgentDisplayMode::Companion {
         let profile = config.agents.profile(config.agent);
         let delivery_mode = profile.resolved_delivery(config.agent);
-        match delivery::deliver_prompt(&prompt, delivery_mode) {
-            Ok(outcome) => ui.show_delivery(&outcome),
+        let paste_window = profile.resolved_paste_window_title(config.agent);
+        match delivery::deliver_prompt(&prompt, delivery_mode, paste_window) {
+            Ok(outcome) => ui.show_delivery(&outcome, paste_window),
             Err(error) => ui.show_delivery_failed(&error.to_string()),
         }
         let _ = telemetry::record_utterance(
@@ -408,6 +416,7 @@ pub(crate) fn transcription_options(config: &AppConfig) -> TranscriptionOptions 
     TranscriptionOptions {
         language: Some(config.language.clone()),
         initial_prompt: whisper_initial_prompt(&config.pipeline),
+        on_partial: None,
     }
 }
 

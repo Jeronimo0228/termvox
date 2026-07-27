@@ -79,6 +79,8 @@ pub struct AgentProfile {
     pub copy_to_clipboard: Option<bool>,
     /// Companion delivery: clipboard, paste, or both.
     pub delivery: Option<PromptDelivery>,
+    /// Focus a window whose title contains this substring before auto-paste.
+    pub paste_window_title: Option<String>,
 }
 
 /// Invocation options derived from the active agent profile.
@@ -190,6 +192,25 @@ impl AgentProfile {
             PromptDelivery::Clipboard
         }
     }
+
+    #[must_use]
+    pub fn resolved_paste_window_title(&self, kind: AgentKind) -> Option<&str> {
+        if let Some(title) = self.paste_window_title.as_deref().filter(|title| !title.is_empty())
+        {
+            return Some(title);
+        }
+        if kind == AgentKind::Cursor
+            && self.resolved_display(kind) == AgentDisplayMode::Companion
+            && matches!(
+                self.resolved_delivery(kind),
+                PromptDelivery::Paste | PromptDelivery::Both
+            )
+        {
+            Some("Cursor")
+        } else {
+            None
+        }
+    }
 }
 
 #[must_use]
@@ -267,7 +288,8 @@ pub const fn agent_ui(kind: AgentKind) -> AgentUiTheme {
 pub fn agent_hints(kind: AgentKind) -> &'static [&'static str] {
     match kind {
         AgentKind::Cursor => &[
-            "Default display is companion — transcribe and auto-copy; paste into the Cursor TUI with Ctrl+V.",
+            "Default display is companion — transcribe, copy, and auto-paste into the Cursor window.",
+            "Set agents.cursor.paste_window_title to match your Cursor window title if focus fails.",
             "Set agents.cursor.trust_workspace = true for non-interactive workspace trust (-f).",
             "On Wayland, prefer `termvox start --toggle` if hold-to-talk never transcribes.",
         ],
@@ -341,6 +363,14 @@ mod tests {
         assert_eq!(
             AgentProfile::default().resolved_delivery(AgentKind::Cursor),
             PromptDelivery::Both
+        );
+    }
+
+    #[test]
+    fn cursor_companion_defaults_to_cursor_window_title() {
+        assert_eq!(
+            AgentProfile::default().resolved_paste_window_title(AgentKind::Cursor),
+            Some("Cursor")
         );
     }
 }
