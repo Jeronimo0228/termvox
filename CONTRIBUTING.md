@@ -18,7 +18,7 @@ Roadmap entries are intent, not assignments or acceptance guarantees.
 
 ## Development setup
 
-Install Rust 1.85 or later and the platform prerequisites from
+Install Rust 1.86 or later and the platform prerequisites from
 [docs/installation.md](docs/installation.md), then:
 
 ```bash

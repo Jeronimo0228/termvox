@@ -11,7 +11,7 @@ fuente. No se afirma que existan binarios publicados o firmados.
 
 ## Instalación
 
-Instala Rust 1.85 o posterior, Git, las dependencias de audio del sistema y un
+Instala Rust 1.86 o posterior, Git, las dependencias de audio del sistema y un
 agente compatible.
 
 ```bash

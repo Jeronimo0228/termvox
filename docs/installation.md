@@ -10,7 +10,7 @@ SBOMs exist.
 All platforms need:
 
 - Git
-- Rust 1.85 or later, including Cargo
+- Rust 1.86 or later, including Cargo
 - A working microphone and OS permission to use it
 - One [supported coding-agent CLI](agents.md)
 - Either Whisper.cpp plus a model, or an OpenAI API key

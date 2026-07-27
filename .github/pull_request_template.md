@@ -12,7 +12,7 @@
 
 ## Compatibility and security
 
-- [ ] I considered Rust 1.85 (MSRV) compatibility
+- [ ] I considered Rust 1.86 (MSRV) compatibility
 - [ ] I did not add secrets, credentials, private recordings, or transcripts
 - [ ] New dependencies are necessary and compatible with the repository license
 - [ ] Breaking changes and platform-specific behavior are called out above
