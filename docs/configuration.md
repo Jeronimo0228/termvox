@@ -20,6 +20,7 @@ Generate a project file with `termvox init`, a global file with
 ## Complete example
 
 ```toml
+performance_profile = "fast"
 speech_engine = "whisper"
 agent = "codex"
 push_to_talk = "SPACE"
@@ -32,13 +33,17 @@ permission_profile = "safe"
 # Omit device to use the OS default input.
 # device = "Exact device name reported by termvox doctor"
 sample_rate = 16000
-max_seconds = 120
+max_seconds = 30
 vad_threshold_db = -45.0
-vad_silence_ms = 800
+vad_silence_ms = 400
+auto_stop_on_silence = true
 
 [whisper]
-model = "/home/user/.local/share/termvox/models/ggml-base.bin"
+model = "/home/user/.local/share/termvox/models/ggml-tiny.bin"
 threads = 0
+max_threads = 4
+prewarm_on_start = false
+optimize_for_latency = true
 
 [openai]
 api_key_env = "OPENAI_API_KEY"
@@ -84,6 +89,7 @@ The same maintained example is available at
 
 | Key | Allowed/current behavior | Default |
 | --- | --- | --- |
+| `performance_profile` | `fast`, `balanced`, `accurate`, or `custom` | `fast` |
 | `speech_engine` | `whisper` (`whispercpp` legacy alias), `openai`, `parakeet`, or `vosk` | `whisper` |
 | `agent` | `codex`, `claude`, `cursor`, `gemini`, `aider`, or `amp` | `codex` |
 | `push_to_talk` | `SPACE`, `ENTER`, `TAB`, `F1`–`F24`, or one character | `SPACE` |
@@ -109,7 +115,9 @@ voiced frame. This setting trims captured audio; it does not stop recording.
 ## Speech providers
 
 Embedded Whisper is the default. Install the reviewed model with
-`termvox models install default`. `whisper.model` should be an absolute path;
+`termvox models install default` (~74 MiB tiny) or
+`termvox models install accurate` (~142 MiB base). See
+[Performance](performance.md).
 tilde (`~`) expansion is performed by shells, not TOML parsers, so a quoted
 path beginning with `~` may not work. `whisper.threads = 0` selects available
 CPU parallelism.

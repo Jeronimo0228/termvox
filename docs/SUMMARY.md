@@ -5,6 +5,7 @@
 - [Coding agents](agents.md)
 - [Speech engines](speech-engines.md)
 - [Configuration](configuration.md)
+- [Performance](performance.md)
 - [CLI reference](cli-reference.md)
 - [Privacy and security](privacy-security.md)
 - [Architecture](architecture.md)

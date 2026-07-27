@@ -3,6 +3,7 @@
 mod agents;
 mod config;
 mod events;
+mod performance;
 mod pipeline;
 mod policy;
 mod sessions;
@@ -10,6 +11,7 @@ mod sessions;
 pub use agents::*;
 pub use config::*;
 pub use events::*;
+pub use performance::*;
 pub use pipeline::*;
 pub use policy::*;
 pub use sessions::*;

@@ -180,10 +180,11 @@ pub(crate) async fn model(config: AppConfig, command: ModelCommand) -> Result<()
 }
 
 fn resolve_model<'a>(manifest: &'a ModelManifest, requested: &str) -> Result<&'a ModelArtifact> {
-    let id = if requested == "default" {
-        "whisper-base"
-    } else {
-        requested
+    let id = match requested {
+        "default" | "fast" => "whisper-tiny",
+        "balanced" => "whisper-tiny",
+        "accurate" | "base" => "whisper-base",
+        other => other,
     };
     manifest
         .find(id, std::env::consts::OS)
@@ -191,7 +192,7 @@ fn resolve_model<'a>(manifest: &'a ModelManifest, requested: &str) -> Result<&'a
 }
 
 fn model_destination(config: &AppConfig, artifact: &ModelArtifact) -> Result<PathBuf> {
-    if artifact.id == "whisper-base" {
+    if artifact.id == "whisper-tiny" || artifact.id == "whisper-base" {
         return Ok(config.whisper.model.clone());
     }
     let filename = artifact

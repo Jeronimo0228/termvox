@@ -67,9 +67,36 @@ impl RuntimeLimits {
     }
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum PerformanceProfile {
+    /// Lowest RAM and latency — recommended default for voice commands.
+    #[default]
+    Fast,
+    /// Balance between speed and accuracy.
+    Balanced,
+    /// Highest accuracy, higher RAM and latency.
+    Accurate,
+    /// User manages individual tuning keys.
+    Custom,
+}
+
+impl PerformanceProfile {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Fast => "fast",
+            Self::Balanced => "balanced",
+            Self::Accurate => "accurate",
+            Self::Custom => "custom",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AppConfig {
+    pub performance_profile: PerformanceProfile,
     pub speech_engine: SpeechEngineKind,
     pub agent: AgentKind,
     pub agent_plugin: Option<String>,
@@ -95,6 +122,7 @@ pub struct AppConfig {
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
+            performance_profile: PerformanceProfile::Fast,
             speech_engine: SpeechEngineKind::WhisperCpp,
             agent: AgentKind::Codex,
             agent_plugin: None,
@@ -125,6 +153,8 @@ pub struct AudioConfig {
     pub max_seconds: u32,
     pub vad_threshold_db: f32,
     pub vad_silence_ms: u64,
+    /// Stop recording automatically after trailing silence (toggle mode).
+    pub auto_stop_on_silence: bool,
 }
 
 impl Default for AudioConfig {
@@ -132,9 +162,10 @@ impl Default for AudioConfig {
         Self {
             device: None,
             sample_rate: 16_000,
-            max_seconds: 120,
+            max_seconds: 30,
             vad_threshold_db: -45.0,
-            vad_silence_ms: 800,
+            vad_silence_ms: 400,
+            auto_stop_on_silence: true,
         }
     }
 }
@@ -145,13 +176,22 @@ pub struct WhisperConfig {
     pub model: PathBuf,
     /// Decoder worker count. Zero selects the available CPU parallelism.
     pub threads: usize,
+    /// Cap automatic thread selection to limit CPU/RAM overhead.
+    pub max_threads: usize,
+    /// Load the model during startup instead of the first utterance.
+    pub prewarm_on_start: bool,
+    /// Tune Whisper for short voice commands (lower latency, less context RAM).
+    pub optimize_for_latency: bool,
 }
 
 impl Default for WhisperConfig {
     fn default() -> Self {
         Self {
-            model: data_path("termvox/models/ggml-base.bin"),
+            model: crate::default_whisper_model(PerformanceProfile::Fast),
             threads: 0,
+            max_threads: 4,
+            prewarm_on_start: false,
+            optimize_for_latency: true,
         }
     }
 }
@@ -263,6 +303,7 @@ impl AppConfig {
             .try_into()
             .map_err(|error| TermVoxError::Config(error.to_string()))?;
         config.normalize_legacy();
+        crate::apply_performance_profile(&mut config);
         Ok(config)
     }
 

@@ -78,7 +78,8 @@ default embedded Whisper base model and optional sidecar models.
 ### `termvox models install [ID]`
 
 Downloads and verifies a reviewed model. `default` installs the multilingual
-`whisper-base` artifact (about 142 MiB) into the configured Whisper model path.
+`whisper-tiny` artifact (about 74 MiB) into the configured Whisper model path.
+Use `termvox models install accurate` for the larger `whisper-base` model (~142 MiB).
 
 ### `termvox models status [ID]`
 
