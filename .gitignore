@@ -3,5 +3,7 @@ termvox.toml
 *.wav
 *.bin
 *.download
+*.cdx.json
+*-all-platforms.json
 .env
 .DS_Store
