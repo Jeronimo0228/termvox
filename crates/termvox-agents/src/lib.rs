@@ -127,6 +127,7 @@ impl CliAgent {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
         let remote_id = session.remote_id().await;
+        command.args(&request.invocation.extra_args);
         match self.kind {
             SupportedAgent::Codex => {
                 command.arg("exec");
@@ -147,7 +148,16 @@ impl CliAgent {
                     command.args(["--resume", &id]);
                 }
             }
-            SupportedAgent::Cursor | SupportedAgent::Gemini => {
+            SupportedAgent::Cursor => {
+                command.args(["-p", &request.prompt, "--output-format", "stream-json"]);
+                if request.invocation.trust_workspace {
+                    command.arg("-f");
+                }
+                if let Some(id) = remote_id {
+                    command.args(["--resume", &id]);
+                }
+            }
+            SupportedAgent::Gemini => {
                 command.args(["-p", &request.prompt, "--output-format", "stream-json"]);
                 if let Some(id) = remote_id {
                     command.args(["--resume", &id]);
@@ -365,7 +375,7 @@ fn parse_line(kind: SupportedAgent, line: &str) -> Option<AgentEvent> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use termvox_core::RuntimeLimits;
+    use termvox_core::{AgentInvocationOptions, RuntimeLimits};
 
     #[test]
     fn all_structured_adapters_parse_forward_compatible_jsonl() {
@@ -409,6 +419,7 @@ mod tests {
             cwd: std::env::temp_dir(),
             limits: RuntimeLimits::default(),
             permission_profile: PermissionProfile::Safe,
+            invocation: AgentInvocationOptions::default(),
         };
         for kind in SupportedAgent::ALL {
             let command = CliAgent::new(kind)
@@ -424,6 +435,29 @@ mod tests {
             assert!(!args.contains("--yolo"));
             assert!(!args.contains("--force"));
         }
+    }
+
+    #[tokio::test]
+    async fn cursor_can_trust_workspace_when_configured() {
+        let request = AgentRequest {
+            prompt: "hello".into(),
+            cwd: std::env::temp_dir(),
+            limits: RuntimeLimits::default(),
+            permission_profile: PermissionProfile::Safe,
+            invocation: AgentInvocationOptions {
+                trust_workspace: true,
+                ..AgentInvocationOptions::default()
+            },
+        };
+        let command = CliAgent::cursor()
+            .command(&AgentSession::default(), &request)
+            .await;
+        let args = command
+            .as_std()
+            .get_args()
+            .map(|arg| arg.to_string_lossy())
+            .collect::<Vec<_>>();
+        assert!(args.iter().any(|arg| arg == "-f"));
     }
 
     #[cfg(unix)]
@@ -454,6 +488,7 @@ mod tests {
                     cwd: std::env::temp_dir(),
                     limits,
                     permission_profile: PermissionProfile::Safe,
+                    invocation: AgentInvocationOptions::default(),
                 },
                 CancellationToken::new(),
             )

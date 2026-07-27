@@ -1,7 +1,9 @@
 mod cli;
+mod clipboard;
 mod commands;
 mod doctor;
 mod runtime;
+mod session_ui;
 mod setup;
 mod ui;
 

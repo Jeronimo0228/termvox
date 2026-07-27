@@ -1,11 +1,13 @@
 //! Shared contracts, configuration, pipeline, and safety policy for `TermVox`.
 
+mod agents;
 mod config;
 mod events;
 mod pipeline;
 mod policy;
 mod sessions;
 
+pub use agents::*;
 pub use config::*;
 pub use events::*;
 pub use pipeline::*;

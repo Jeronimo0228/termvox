@@ -1,22 +1,18 @@
 #[cfg(feature = "embedded-whisper")]
 use std::io::IsTerminal;
-use std::{
-    io::{self, Write},
-    path::PathBuf,
-    sync::Arc,
-    time::Duration,
-};
+use std::{io, path::PathBuf, sync::Arc, time::Duration};
 
 use anyhow::{Result, bail};
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     terminal::{disable_raw_mode, enable_raw_mode},
 };
-use termvox_agents::CliAgent;
+use termvox_agents::{CliAgent, SupportedAgent};
 use termvox_audio::{AudioRecorder, trim_with_vad_hangover};
 use termvox_core::{
-    AgentAdapter, AgentKind, AgentRequest, AgentSession, AppConfig, PromptPipeline, SpeechEngine,
-    SpeechEngineKind, TranscriptionOptions, assess_prompt,
+    AgentAdapter, AgentDisplayMode, AgentKind, AgentRequest, AgentSession, AppConfig,
+    PromptPipeline, SpeechEngine, SpeechEngineKind, TranscriptionOptions, assess_prompt,
+    whisper_initial_prompt,
 };
 use termvox_hotkeys::{HotkeyRegistration, TriggerState};
 use termvox_plugin_sdk::PluginAgentAdapter;
@@ -27,11 +23,14 @@ use tokio_util::sync::CancellationToken;
 
 use crate::{
     cli::RecordAction,
+    clipboard,
+    session_ui::SessionUi,
     ui::{RawMode, confirm, parse_key, print_agent_event},
 };
 
 pub(crate) async fn test_audio(config: AppConfig, seconds: u64) -> Result<()> {
     let speech = ensure_speech_engine(&config).await?;
+    speech.prewarm().await?;
     println!("Recording for {seconds} second(s)...");
     let recorder = AudioRecorder::start(&config.audio)?;
     tokio::time::sleep(Duration::from_secs(seconds)).await;
@@ -47,14 +46,11 @@ pub(crate) async fn test_audio(config: AppConfig, seconds: u64) -> Result<()> {
     let transcript = speech
         .transcribe(
             audio,
-            &TranscriptionOptions {
-                language: Some(config.language),
-                initial_prompt: None,
-            },
+            &transcription_options(&config),
             CancellationToken::new(),
         )
         .await?;
-    println!("{}", transcript.text);
+    println!("{} ({} ms)", transcript.text, transcript.duration_ms);
     Ok(())
 }
 
@@ -66,14 +62,16 @@ pub(crate) async fn start(
 ) -> Result<()> {
     let agent = selected_agent(&config)?;
     let info = agent.probe().await;
-    if !info.installed {
+    if !info.installed && !is_companion_mode(&config) {
         bail!(
             "{} is not installed; install it or select another agent",
             info.id
         );
     }
     let speech = ensure_speech_engine(&config).await?;
+    speech.prewarm().await?;
     let session = agent.start().await?;
+    let ui = session_ui(&config, toggle);
     let shutdown = CancellationToken::new();
     let signal_cancel = shutdown.clone();
     tokio::spawn(async move {
@@ -83,22 +81,20 @@ pub(crate) async fn start(
     });
     if let Some(shortcut) = global_hotkey {
         let registration = HotkeyRegistration::register(shortcut)?;
-        println!(
-            "TermVox ready. {} {shortcut} globally to talk; Ctrl+C quits.",
-            if toggle { "Press" } else { "Hold" }
-        );
+        ui.show_global_ready(shortcut);
         let mut recorder = None;
         while !shutdown.is_cancelled() {
             if let Some(state) = registration.poll() {
                 match state {
                     TriggerState::Pressed if recorder.is_none() => {
                         recorder = Some(AudioRecorder::start(&config.audio)?);
-                        println!("Recording...");
+                        ui.show_recording();
                     }
                     TriggerState::Pressed if toggle => {
                         let audio = recorder.take().expect("checked above").stop().await?;
                         process_utterance(
                             &config,
+                            &ui,
                             audio,
                             speech.as_ref(),
                             agent.as_ref(),
@@ -111,6 +107,7 @@ pub(crate) async fn start(
                         let audio = recorder.take().expect("checked above").stop().await?;
                         process_utterance(
                             &config,
+                            &ui,
                             audio,
                             speech.as_ref(),
                             agent.as_ref(),
@@ -130,11 +127,7 @@ pub(crate) async fn start(
     }
     let _raw_mode = RawMode::enter()?;
     let ptt_key = parse_key(&config.push_to_talk)?;
-    println!(
-        "TermVox ready. {} {} to talk; press q or Ctrl+C to quit.\r",
-        if toggle { "Press" } else { "Hold" },
-        config.push_to_talk,
-    );
+    ui.show_startup(info.version.as_deref());
     let mut recorder = None;
     loop {
         if shutdown.is_cancelled() {
@@ -148,8 +141,7 @@ pub(crate) async fn start(
             break;
         }
         if key.code == ptt_key && key.kind == KeyEventKind::Press && recorder.is_none() {
-            print!("Recording...\r");
-            io::stdout().flush()?;
+            ui.show_recording();
             recorder = Some(AudioRecorder::start(&config.audio)?);
         } else if key.code == ptt_key
             && ((toggle && key.kind == KeyEventKind::Press)
@@ -157,9 +149,9 @@ pub(crate) async fn start(
             && recorder.is_some()
         {
             let audio = recorder.take().expect("checked above").stop().await?;
-            disable_raw_mode()?;
             if let Err(error) = process_utterance(
                 &config,
+                &ui,
                 audio,
                 speech.as_ref(),
                 agent.as_ref(),
@@ -168,10 +160,9 @@ pub(crate) async fn start(
             )
             .await
             {
-                eprintln!("TermVox: {error}");
+                ui.show_error(&error.to_string());
             }
-            enable_raw_mode()?;
-            println!("Hold {} to talk; q quits.\r", config.push_to_talk);
+            ui.show_idle();
         }
     }
     shutdown.cancel();
@@ -182,6 +173,7 @@ pub(crate) async fn start(
 
 async fn process_utterance(
     config: &AppConfig,
+    ui: &SessionUi,
     audio: termvox_core::AudioBuffer,
     speech: &dyn SpeechEngine,
     agent: &dyn AgentAdapter,
@@ -194,31 +186,45 @@ async fn process_utterance(
         config.audio.vad_silence_ms,
     );
     if audio.samples.is_empty() {
-        println!("No speech detected.");
+        ui.show_no_speech();
         return Ok(());
     }
+    ui.show_transcribing();
     let transcript = speech
-        .transcribe(
-            audio,
-            &TranscriptionOptions {
-                language: Some(config.language.clone()),
-                initial_prompt: None,
-            },
-            cancel.child_token(),
-        )
+        .transcribe(audio, &transcription_options(config), cancel.child_token())
         .await?;
     let prompt = PromptPipeline::from_config(&config.pipeline).process(&transcript.text);
-    println!("\nHeard:  {}", transcript.text);
-    println!("Prompt: {prompt}");
     let risk = assess_prompt(&prompt);
-    if risk.requires_confirmation {
-        println!("Risk signals: {}", risk.matches.join(", "));
-    }
+    ui.show_transcript(
+        &transcript.text,
+        &prompt,
+        transcript.duration_ms,
+        &risk.matches,
+    );
     let must_confirm = config.confirmation || risk.requires_confirmation || !config.auto_send;
-    if must_confirm && !confirm("Send to agent? [y/N] ")? {
-        println!("Cancelled.");
+    if must_confirm {
+        disable_raw_mode()?;
+        let approved = confirm(&ui.show_confirm_prompt())?;
+        enable_raw_mode()?;
+        if !approved {
+            ui.show_cancelled();
+            return Ok(());
+        }
+    }
+    if ui.mode() == AgentDisplayMode::Companion {
+        let profile = config.agents.profile(config.agent);
+        if profile.resolved_copy_to_clipboard(config.agent) {
+            match clipboard::copy_text(&prompt) {
+                Ok(()) => ui.show_clipboard_copied(),
+                Err(error) => ui.show_clipboard_failed(&error.to_string()),
+            }
+        }
         return Ok(());
     }
+    let theme = match ui.mode() {
+        AgentDisplayMode::Branded => Some(ui.theme()),
+        _ => None,
+    };
     let mut events = agent
         .send_prompt(
             session,
@@ -227,14 +233,40 @@ async fn process_utterance(
                 cwd: std::env::current_dir()?,
                 limits: config.runtime.clone(),
                 permission_profile: config.permission_profile,
+                invocation: config.agents.profile(config.agent).invocation(),
             },
             cancel,
         )
         .await?;
     while let Some(event) = events.recv().await {
-        print_agent_event(&event?);
+        print_agent_event(&event?, theme);
     }
     Ok(())
+}
+
+fn transcription_options(config: &AppConfig) -> TranscriptionOptions {
+    TranscriptionOptions {
+        language: Some(config.language.clone()),
+        initial_prompt: whisper_initial_prompt(&config.pipeline),
+    }
+}
+
+fn session_ui(config: &AppConfig, toggle: bool) -> SessionUi {
+    let profile = config.agents.profile(config.agent);
+    SessionUi::new(
+        config.agent,
+        profile.resolved_display(config.agent),
+        &config.push_to_talk,
+        toggle,
+    )
+}
+
+fn is_companion_mode(config: &AppConfig) -> bool {
+    config
+        .agents
+        .profile(config.agent)
+        .resolved_display(config.agent)
+        == AgentDisplayMode::Companion
 }
 
 pub(crate) async fn record(config: AppConfig, action: RecordAction) -> Result<()> {
@@ -254,6 +286,7 @@ pub(crate) async fn record(config: AppConfig, action: RecordAction) -> Result<()
         }
         RecordAction::Start | RecordAction::Toggle => {
             let speech = ensure_speech_engine(&config).await?;
+            speech.prewarm().await?;
             if let Some(parent) = marker.parent() {
                 std::fs::create_dir_all(parent)?;
             }
@@ -266,8 +299,10 @@ pub(crate) async fn record(config: AppConfig, action: RecordAction) -> Result<()
             let audio = recorder.stop().await?;
             let agent = selected_agent(&config)?;
             let session = agent.start().await?;
+            let ui = session_ui(&config, true);
             process_utterance(
                 &config,
+                &ui,
                 audio,
                 speech.as_ref(),
                 agent.as_ref(),
@@ -366,14 +401,22 @@ fn selected_agent(config: &AppConfig) -> Result<Arc<dyn AgentAdapter>> {
             .ok_or_else(|| anyhow::anyhow!("enabled agent plugin not found: {id}"))?;
         return Ok(Arc::new(PluginAgentAdapter::new(plugin.clone())));
     }
-    Ok(match config.agent {
-        AgentKind::Codex => Arc::new(CliAgent::codex()),
-        AgentKind::Claude => Arc::new(CliAgent::claude()),
-        AgentKind::Cursor => Arc::new(CliAgent::cursor()),
-        AgentKind::Gemini => Arc::new(CliAgent::gemini()),
-        AgentKind::Aider => Arc::new(CliAgent::aider()),
-        AgentKind::Amp => Arc::new(CliAgent::amp()),
-    })
+    Ok(configured_cli_agent(config.agent, config))
+}
+
+fn configured_cli_agent(kind: AgentKind, config: &AppConfig) -> Arc<dyn AgentAdapter> {
+    let supported = match kind {
+        AgentKind::Codex => SupportedAgent::Codex,
+        AgentKind::Claude => SupportedAgent::Claude,
+        AgentKind::Cursor => SupportedAgent::Cursor,
+        AgentKind::Gemini => SupportedAgent::Gemini,
+        AgentKind::Aider => SupportedAgent::Aider,
+        AgentKind::Amp => SupportedAgent::Amp,
+    };
+    Arc::new(CliAgent::with_executable(
+        supported,
+        config.agents.resolve_executable(kind),
+    ))
 }
 
 pub(crate) fn all_agents() -> [CliAgent; 6] {

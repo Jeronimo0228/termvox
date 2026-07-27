@@ -136,6 +136,40 @@ provider-specific timeout instead.
 do not translate non-safe profiles into undocumented upstream flags, so this
 setting does not grant or enforce agent permissions.
 
+## Agent profiles
+
+Each coding-agent CLI has its own quirks (auth flags, workspace trust, JSON
+modes). TermVox keeps shared settings at the top level and agent-specific
+options under `[agents.<name>]`, where `<name>` matches the `agent` value.
+
+```toml
+agent = "cursor"
+
+[agents.cursor]
+executable = "agent"          # optional override
+trust_workspace = true          # Cursor only: pass -f for non-interactive trust
+extra_args = []                 # inserted before the prompt argument
+
+[agents.claude]
+extra_args = []
+
+[agents.codex]
+extra_args = []
+```
+
+| Key | Applies to | Purpose |
+| --- | --- | --- |
+| `executable` | Any agent | Override the default CLI binary name or path |
+| `extra_args` | Any agent | Documented upstream flags before the prompt |
+| `trust_workspace` | Cursor only | Pass `-f` when the CLI requires workspace trust |
+| `display` | Any agent | `branded`, `companion`, or `verbose` UI mode |
+| `copy_to_clipboard` | Any agent | Auto-copy the prompt in companion mode (default: on for companion) |
+
+Legacy `[cursor].trust_workspace` is still loaded and mapped to
+`[agents.cursor].trust_workspace`. Run `termvox doctor` to see the active
+profile, display mode, warnings, and hints. See [Coding agents](agents.md) for
+per-agent notes and UI behavior.
+
 ## Plugins
 
 Each `[[plugins]]` entry requires a non-empty `id` and executable path.

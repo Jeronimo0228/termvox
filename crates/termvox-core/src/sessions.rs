@@ -6,7 +6,7 @@ use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-use crate::{AgentEventStream, PermissionProfile, Result, RuntimeLimits};
+use crate::{AgentEventStream, AgentInvocationOptions, PermissionProfile, Result, RuntimeLimits};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AgentInfo {
@@ -55,6 +55,7 @@ pub struct AgentRequest {
     pub cwd: PathBuf,
     pub limits: RuntimeLimits,
     pub permission_profile: PermissionProfile,
+    pub invocation: AgentInvocationOptions,
 }
 
 #[async_trait]

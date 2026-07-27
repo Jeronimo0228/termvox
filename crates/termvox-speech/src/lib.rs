@@ -75,6 +75,21 @@ impl SpeechEngine for EmbeddedWhisperEngine {
         }
     }
 
+    async fn prewarm(&self) -> Result<()> {
+        self.healthcheck().await?;
+        #[cfg(feature = "embedded-whisper")]
+        {
+            let config = self.config.clone();
+            let context = Arc::clone(&self.context);
+            tokio::task::spawn_blocking(move || load_whisper_context(&config, &context))
+                .await
+                .map_err(|error| {
+                    TermVoxError::Speech(format!("embedded Whisper prewarm failed: {error}"))
+                })??;
+        }
+        Ok(())
+    }
+
     async fn transcribe(
         &self,
         audio: AudioBuffer,
@@ -109,6 +124,32 @@ impl SpeechEngine for EmbeddedWhisperEngine {
 }
 
 #[cfg(feature = "embedded-whisper")]
+fn load_whisper_context(
+    config: &WhisperConfig,
+    context_cache: &Mutex<Option<Arc<WhisperContext>>>,
+) -> Result<Arc<WhisperContext>> {
+    let mut cached = context_cache
+        .lock()
+        .map_err(|_| TermVoxError::Speech("Whisper model cache lock was poisoned".into()))?;
+    if let Some(context) = cached.as_ref() {
+        return Ok(Arc::clone(context));
+    }
+    whisper_rs::install_logging_hooks();
+    let mut parameters = WhisperContextParameters::default();
+    parameters.use_gpu(false);
+    let loaded = Arc::new(
+        WhisperContext::new_with_params(&config.model, parameters).map_err(|error| {
+            TermVoxError::Speech(format!(
+                "failed to load Whisper model {}: {error}",
+                config.model.display()
+            ))
+        })?,
+    );
+    *cached = Some(Arc::clone(&loaded));
+    Ok(loaded)
+}
+
+#[cfg(feature = "embedded-whisper")]
 fn transcribe_embedded(
     config: &WhisperConfig,
     context_cache: &Mutex<Option<Arc<WhisperContext>>>,
@@ -127,28 +168,7 @@ fn transcribe_embedded(
     }
 
     let started = Instant::now();
-    let context = {
-        let mut cached = context_cache
-            .lock()
-            .map_err(|_| TermVoxError::Speech("Whisper model cache lock was poisoned".into()))?;
-        if let Some(context) = cached.as_ref() {
-            Arc::clone(context)
-        } else {
-            whisper_rs::install_logging_hooks();
-            let mut parameters = WhisperContextParameters::default();
-            parameters.use_gpu(false);
-            let loaded = Arc::new(
-                WhisperContext::new_with_params(&config.model, parameters).map_err(|error| {
-                    TermVoxError::Speech(format!(
-                        "failed to load Whisper model {}: {error}",
-                        config.model.display()
-                    ))
-                })?,
-            );
-            *cached = Some(Arc::clone(&loaded));
-            loaded
-        }
-    };
+    let context = load_whisper_context(config, context_cache)?;
 
     let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
     let threads = if config.threads == 0 {
