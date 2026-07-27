@@ -125,6 +125,7 @@ jobs:
   publish:
     name: publish GitHub release
     needs: build
+    if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -135,6 +136,16 @@ jobs:
           pattern: release-*
           path: dist
           merge-multiple: true
+      - name: Ensure release artifacts exist
+        shell: bash
+        run: |
+          shopt -s nullglob
+          files=(dist/termvox-v*.tar.gz dist/termvox-v*.zip)
+          if [[ ${#files[@]} -eq 0 ]]; then
+            echo "No release artifacts were uploaded; skipping publish."
+            exit 1
+          fi
+          printf 'Found %s artifact(s)\n' "${#files[@]}"
       - uses: sigstore/cosign-installer@v3
       - run: scripts/verify-release.sh dist
       - run: scripts/verify-release.sh --write-checksums dist
