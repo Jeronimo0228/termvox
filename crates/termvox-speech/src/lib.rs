@@ -5,6 +5,8 @@
     clippy::missing_errors_doc
 )]
 
+#[cfg(feature = "embedded-whisper")]
+use std::sync::{Arc, Mutex};
 use std::{
     path::{Path, PathBuf},
     time::{Instant, SystemTime, UNIX_EPOCH},
@@ -26,37 +28,51 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 
-pub struct WhisperCppEngine {
+#[cfg(feature = "embedded-whisper")]
+use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
+
+pub struct EmbeddedWhisperEngine {
+    #[cfg_attr(not(feature = "embedded-whisper"), allow(dead_code))]
     config: WhisperConfig,
+    #[cfg(feature = "embedded-whisper")]
+    context: Arc<Mutex<Option<Arc<WhisperContext>>>>,
 }
 
-impl WhisperCppEngine {
+impl EmbeddedWhisperEngine {
     #[must_use]
     pub fn new(config: WhisperConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+            #[cfg(feature = "embedded-whisper")]
+            context: Arc::new(Mutex::new(None)),
+        }
     }
 }
 
 #[async_trait]
-impl SpeechEngine for WhisperCppEngine {
+impl SpeechEngine for EmbeddedWhisperEngine {
     fn id(&self) -> &'static str {
-        "whispercpp"
+        "whisper"
     }
 
     async fn healthcheck(&self) -> Result<()> {
-        if which_executable(&self.config.executable).is_none() {
-            return Err(TermVoxError::Speech(format!(
-                "{} was not found in PATH",
-                self.config.executable
-            )));
+        #[cfg(not(feature = "embedded-whisper"))]
+        {
+            return Err(TermVoxError::Speech(
+                "embedded Whisper support is disabled in this build".into(),
+            ));
         }
-        if !self.config.model.is_file() {
-            return Err(TermVoxError::Speech(format!(
-                "Whisper model not found: {}",
-                self.config.model.display()
-            )));
+
+        #[cfg(feature = "embedded-whisper")]
+        {
+            if !self.config.model.is_file() {
+                return Err(TermVoxError::Speech(format!(
+                    "Whisper model not found: {}; install it with `termvox models install default`",
+                    self.config.model.display()
+                )));
+            }
+            Ok(())
         }
-        Ok(())
     }
 
     async fn transcribe(
@@ -69,56 +85,148 @@ impl SpeechEngine for WhisperCppEngine {
         if audio.samples.is_empty() {
             return Err(TermVoxError::Speech("audio contains no voice".into()));
         }
-        let started = Instant::now();
-        let stem = temp_stem("termvox-whisper");
-        let wav_path = stem.with_extension("wav");
-        let output_path = stem.with_extension("txt");
-        fs::write(&wav_path, encode_wav(&audio)?).await?;
 
-        let mut command = Command::new(&self.config.executable);
-        command
-            .arg("-m")
-            .arg(&self.config.model)
-            .arg("-f")
-            .arg(&wav_path)
-            .arg("-otxt")
-            .arg("-of")
-            .arg(&stem)
-            .arg("-np")
-            .kill_on_drop(true);
-        if let Some(language) = &options.language {
-            command.arg("-l").arg(language);
-        }
-        if let Some(prompt) = &options.initial_prompt {
-            command.arg("--prompt").arg(prompt);
+        #[cfg(not(feature = "embedded-whisper"))]
+        {
+            let _ = (options, cancel);
+            unreachable!("healthcheck rejects builds without embedded Whisper");
         }
 
-        let output = tokio::select! {
-            () = cancel.cancelled() => {
-                cleanup(&[&wav_path, &output_path]).await;
-                return Err(TermVoxError::Cancelled);
-            }
-            output = command.output() => output?,
-        };
-        if !output.status.success() {
-            cleanup(&[&wav_path, &output_path]).await;
-            return Err(TermVoxError::Speech(
-                String::from_utf8_lossy(&output.stderr).trim().to_owned(),
-            ));
-        }
-        let text = fs::read_to_string(&output_path)
+        #[cfg(feature = "embedded-whisper")]
+        {
+            let config = self.config.clone();
+            let context = Arc::clone(&self.context);
+            let options = options.clone();
+            tokio::task::spawn_blocking(move || {
+                transcribe_embedded(&config, &context, &audio, &options, &cancel)
+            })
             .await
-            .or_else(|_| String::from_utf8(output.stdout).map_err(std::io::Error::other))?
-            .trim()
-            .to_owned();
-        cleanup(&[&wav_path, &output_path]).await;
-        Ok(Transcription {
-            text,
-            language: options.language.clone(),
-            duration_ms: started.elapsed().as_millis() as u64,
-            segments: Vec::new(),
-        })
+            .map_err(|error| {
+                TermVoxError::Speech(format!("embedded Whisper worker failed: {error}"))
+            })?
+        }
     }
+}
+
+#[cfg(feature = "embedded-whisper")]
+fn transcribe_embedded(
+    config: &WhisperConfig,
+    context_cache: &Mutex<Option<Arc<WhisperContext>>>,
+    audio: &AudioBuffer,
+    options: &TranscriptionOptions,
+    cancel: &CancellationToken,
+) -> Result<Transcription> {
+    if audio.sample_rate != 16_000 {
+        return Err(TermVoxError::Speech(format!(
+            "embedded Whisper requires 16000 Hz mono audio, received {} Hz",
+            audio.sample_rate
+        )));
+    }
+    if cancel.is_cancelled() {
+        return Err(TermVoxError::Cancelled);
+    }
+
+    let started = Instant::now();
+    let context = {
+        let mut cached = context_cache
+            .lock()
+            .map_err(|_| TermVoxError::Speech("Whisper model cache lock was poisoned".into()))?;
+        if let Some(context) = cached.as_ref() {
+            Arc::clone(context)
+        } else {
+            whisper_rs::install_logging_hooks();
+            let mut parameters = WhisperContextParameters::default();
+            parameters.use_gpu(false);
+            let loaded = Arc::new(
+                WhisperContext::new_with_params(&config.model, parameters).map_err(|error| {
+                    TermVoxError::Speech(format!(
+                        "failed to load Whisper model {}: {error}",
+                        config.model.display()
+                    ))
+                })?,
+            );
+            *cached = Some(Arc::clone(&loaded));
+            loaded
+        }
+    };
+
+    let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
+    let threads = if config.threads == 0 {
+        std::thread::available_parallelism().map_or(4, std::num::NonZeroUsize::get)
+    } else {
+        config.threads
+    };
+    params.set_n_threads(i32::try_from(threads).unwrap_or(i32::MAX));
+    params.set_print_progress(false);
+    params.set_print_realtime(false);
+    params.set_print_timestamps(false);
+    params.set_translate(false);
+    params.set_language(
+        options
+            .language
+            .as_deref()
+            .filter(|language| !language.is_empty()),
+    );
+    if let Some(prompt) = options
+        .initial_prompt
+        .as_deref()
+        .filter(|prompt| !prompt.is_empty())
+    {
+        params.set_initial_prompt(prompt);
+    }
+    let abort = cancel.clone();
+    let abort_callback: Box<dyn FnMut() -> bool> = Box::new(move || abort.is_cancelled());
+    params.set_abort_callback_safe::<Option<Box<dyn FnMut() -> bool>>, Box<dyn FnMut() -> bool>>(
+        Some(abort_callback),
+    );
+
+    let mut state = context.create_state().map_err(|error| {
+        TermVoxError::Speech(format!("failed to create Whisper state: {error}"))
+    })?;
+    state.full(params, &audio.samples).map_err(|error| {
+        if cancel.is_cancelled() {
+            TermVoxError::Cancelled
+        } else {
+            TermVoxError::Speech(format!("Whisper transcription failed: {error}"))
+        }
+    })?;
+
+    let segments = state
+        .as_iter()
+        .map(|segment| {
+            let text = segment
+                .to_str_lossy()
+                .map_err(|error| {
+                    TermVoxError::Speech(format!("invalid Whisper segment text: {error}"))
+                })?
+                .into_owned();
+            Ok(TranscriptSegment {
+                start_ms: whisper_timestamp_ms(segment.start_timestamp()),
+                end_ms: whisper_timestamp_ms(segment.end_timestamp()),
+                text,
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let text = segments
+        .iter()
+        .map(|segment| segment.text.as_str())
+        .collect::<String>()
+        .trim()
+        .to_owned();
+
+    Ok(Transcription {
+        text,
+        language: options.language.clone(),
+        duration_ms: started.elapsed().as_millis() as u64,
+        segments,
+    })
+}
+
+#[cfg(feature = "embedded-whisper")]
+fn whisper_timestamp_ms(timestamp: i64) -> u64 {
+    u64::try_from(timestamp)
+        .unwrap_or_default()
+        .saturating_mul(10)
 }
 
 pub struct OpenAiSpeechEngine {
@@ -406,6 +514,13 @@ impl Default for ModelManager {
 }
 
 impl ModelManager {
+    pub async fn verify_file(path: &Path, expected_sha256: &str) -> Result<bool> {
+        if expected_sha256.len() != 64 || !path.is_file() {
+            return Ok(false);
+        }
+        Ok(hash_file(path).await?.eq_ignore_ascii_case(expected_sha256))
+    }
+
     pub async fn download_verified(
         &self,
         url: &str,
@@ -498,18 +613,7 @@ impl ModelManager {
         output.sync_all().await?;
         drop(output);
 
-        let mut input = fs::File::open(&temporary).await?;
-        input.seek(std::io::SeekFrom::Start(0)).await?;
-        let mut hasher = Sha256::new();
-        let mut buffer = vec![0_u8; 64 * 1024];
-        loop {
-            let read = input.read(&mut buffer).await?;
-            if read == 0 {
-                break;
-            }
-            hasher.update(&buffer[..read]);
-        }
-        let actual = hex::encode(hasher.finalize());
+        let actual = hash_file(&temporary).await?;
         if !actual.eq_ignore_ascii_case(expected_sha256) {
             let _ = fs::remove_file(&temporary).await;
             return Err(TermVoxError::Speech(format!(
@@ -519,6 +623,21 @@ impl ModelManager {
         atomic_replace(&temporary, destination).await?;
         Ok(())
     }
+}
+
+async fn hash_file(path: &Path) -> Result<String> {
+    let mut input = fs::File::open(path).await?;
+    input.seek(std::io::SeekFrom::Start(0)).await?;
+    let mut hasher = Sha256::new();
+    let mut buffer = vec![0_u8; 64 * 1024];
+    loop {
+        let read = input.read(&mut buffer).await?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    Ok(hex::encode(hasher.finalize()))
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -628,6 +747,13 @@ mod tests {
     #[test]
     fn bundled_manifest_contains_verified_portable_model() {
         let manifest = ModelManifest::bundled().unwrap();
+        let whisper = manifest.find("whisper-base", std::env::consts::OS).unwrap();
+        assert_eq!(whisper.size_bytes, 147_951_465);
+        assert_eq!(
+            whisper.sha256,
+            "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe"
+        );
+        assert_eq!(whisper.license, "MIT");
         let model = manifest
             .find("vosk-model-small-es-0.42", std::env::consts::OS)
             .unwrap();
@@ -635,42 +761,65 @@ mod tests {
         assert_eq!(model.license, "Apache-2.0");
     }
 
-    #[cfg(unix)]
     #[tokio::test]
-    async fn whisper_adapter_invokes_cli_without_a_shell() {
-        use std::os::unix::fs::PermissionsExt;
-
-        let stem = temp_stem("termvox-fake-whisper");
-        let executable = stem.with_extension("sh");
-        let model = stem.with_extension("bin");
-        fs::write(
-            &executable,
-            "#!/bin/sh\nout=''\nwhile [ \"$#\" -gt 0 ]; do\n\
-             if [ \"$1\" = '-of' ]; then shift; out=\"$1\"; fi\nshift\ndone\n\
-             printf 'hello world\\n' > \"${out}.txt\"\n",
-        )
-        .await
-        .unwrap();
-        let mut permissions = std::fs::metadata(&executable).unwrap().permissions();
-        permissions.set_mode(0o700);
-        std::fs::set_permissions(&executable, permissions).unwrap();
-        fs::write(&model, b"fake").await.unwrap();
-        let engine = WhisperCppEngine::new(WhisperConfig {
-            executable: executable.display().to_string(),
-            model: model.clone(),
-        });
-        let result = engine
-            .transcribe(
-                AudioBuffer {
-                    samples: vec![0.1; 160],
-                    sample_rate: 16_000,
-                },
-                &TranscriptionOptions::default(),
-                CancellationToken::new(),
+    async fn verifies_local_model_checksum() {
+        let path = temp_stem("termvox-model-checksum").with_extension("bin");
+        fs::write(&path, b"hello").await.unwrap();
+        assert!(
+            ModelManager::verify_file(
+                &path,
+                "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
             )
             .await
-            .unwrap();
-        cleanup(&[&executable, &model]).await;
-        assert_eq!(result.text, "hello world");
+            .unwrap()
+        );
+        assert!(
+            !ModelManager::verify_file(
+                &path,
+                "0000000000000000000000000000000000000000000000000000000000000000"
+            )
+            .await
+            .unwrap()
+        );
+        cleanup(&[&path]).await;
+    }
+
+    #[cfg(feature = "embedded-whisper")]
+    #[tokio::test]
+    async fn embedded_whisper_reports_missing_model_actionably() {
+        let engine = EmbeddedWhisperEngine::new(WhisperConfig {
+            model: PathBuf::from("definitely-missing-model.bin"),
+            threads: 0,
+        });
+        let error = engine.healthcheck().await.unwrap_err();
+        assert!(error.to_string().contains("termvox models install default"));
+    }
+
+    #[cfg(feature = "embedded-whisper")]
+    #[test]
+    fn embedded_whisper_honors_preexisting_cancellation() {
+        let cancel = CancellationToken::new();
+        cancel.cancel();
+        let result = transcribe_embedded(
+            &WhisperConfig {
+                model: PathBuf::from("not-loaded.bin"),
+                threads: 0,
+            },
+            &Mutex::new(None),
+            &AudioBuffer {
+                samples: vec![0.0; 160],
+                sample_rate: 16_000,
+            },
+            &TranscriptionOptions::default(),
+            &cancel,
+        );
+        assert!(matches!(result, Err(TermVoxError::Cancelled)));
+    }
+
+    #[cfg(feature = "embedded-whisper")]
+    #[test]
+    fn converts_whisper_centiseconds_to_milliseconds_safely() {
+        assert_eq!(whisper_timestamp_ms(123), 1_230);
+        assert_eq!(whisper_timestamp_ms(-1), 0);
     }
 }

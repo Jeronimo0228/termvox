@@ -34,10 +34,10 @@ This repository is prepared as `0.1.0-alpha.1`. Nothing has been published.
 - [ ] Test microphone capture and permission prompts on macOS and Windows.
 - [ ] Record evidence for each supported route in the six-agent matrix:
       Codex, Claude Code, Cursor, Gemini CLI, Aider, and Amp.
-- [ ] Record evidence for Whisper.cpp, OpenAI, Parakeet, and Vosk on every
-      platform claimed in the compatibility table.
-- [ ] Add reviewed Whisper.cpp and Parakeet artifacts to the model manifest.
+- [x] Add reviewed Whisper base and tiny artifacts to the model manifest.
       The Spanish Vosk model entry is verified.
+- [ ] Record evidence for embedded Whisper, OpenAI, Parakeet, and Vosk on every
+      platform claimed in the compatibility table.
 - [ ] Run a clean `install → setup → doctor → start` test for each release
       archive.
 - [ ] Verify generated SBOMs, attestations, checksums, and keyless signatures.

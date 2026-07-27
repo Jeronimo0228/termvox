@@ -17,7 +17,7 @@ tested OS versions or architectures.
 
 ## Rust
 
-The workspace declares Rust 1.86 and edition 2024. Older toolchains are
+The workspace declares Rust 1.88 and edition 2024. Older toolchains are
 unsupported.
 
 ## Coding agents
@@ -30,10 +30,11 @@ current adapter. See [Coding agents](agents.md).
 
 ## Speech-to-text
 
-Whisper.cpp compatibility means an executable accepting the documented
-`whisper-cli` arguments and a compatible GGML model. OpenAI compatibility means
-an endpoint implementing the multipart transcription shape used by the
-adapter. Alternative endpoints are not tested or endorsed.
+Embedded Whisper is the free local default. It runs in-process on the CPU and
+requires the reviewed `ggml-base.bin` model installed with
+`termvox models install default`. OpenAI compatibility means an endpoint
+implementing the multipart transcription shape used by the adapter. Alternative
+endpoints are not tested or endorsed.
 
 Parakeet and Vosk use a generic sidecar command contract. TermVox does not
 bundle or certify a sidecar or model for either engine. See

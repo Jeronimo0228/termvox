@@ -36,10 +36,7 @@ pub(crate) fn init_config(global: bool, force: bool, interactive: bool) -> Resul
     if interactive && io::stdin().is_terminal() {
         config.language = prompt_default("Language", &config.language)?;
         config.push_to_talk = prompt_default("Push-to-talk key", &config.push_to_talk)?;
-        let engine = prompt_default(
-            "Speech engine (whispercpp/openai/parakeet/vosk)",
-            "whispercpp",
-        )?;
+        let engine = prompt_default("Speech engine (whisper/openai/parakeet/vosk)", "whisper")?;
         config.speech_engine = match engine.to_lowercase().as_str() {
             "openai" => SpeechEngineKind::OpenAi,
             "parakeet" => SpeechEngineKind::Parakeet,

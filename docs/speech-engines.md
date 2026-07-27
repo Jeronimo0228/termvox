@@ -4,37 +4,40 @@
 
 | Engine | Config value | Processing location | Status |
 | --- | --- | --- | --- |
-| Whisper.cpp | `whispercpp` | Local subprocess | Built-in adapter |
+| Embedded Whisper | `whisper` (`whispercpp` legacy alias) | In-process, local CPU | Default built-in adapter |
 | OpenAI speech-to-text | `openai` | Configured HTTPS service | Built-in adapter |
 | Parakeet | `parakeet` | Local sidecar subprocess | Generic sidecar adapter |
 | Vosk | `vosk` | Local sidecar subprocess | Generic sidecar adapter |
 
-## Whisper.cpp
+## Embedded Whisper
 
-The local adapter expects a `whisper-cli`-compatible executable and a GGML model
-file. It writes the utterance as a temporary mono 16-bit WAV, invokes:
+TermVox embeds Whisper.cpp through `whisper-rs`. Audio inference runs on the
+local CPU in a blocking worker, so captured audio never needs to leave the
+device and no API key is required. No temporary WAV or external `whisper-cli`
+process is used.
 
-```text
-whisper-cli -m MODEL -f INPUT.wav -otxt -of OUTPUT -np [-l LANGUAGE]
+Install and inspect the reviewed default model with:
+
+```bash
+termvox models install default
+termvox models status default
 ```
-
-and deletes the temporary WAV and text output after completion or handled
-cancellation. A crash or abrupt process termination can leave temporary files
-in the operating system's temporary directory.
 
 Configure it with:
 
 ```toml
-speech_engine = "whispercpp"
+speech_engine = "whisper"
 language = "en"
 
 [whisper]
-executable = "whisper-cli"
-model = "/absolute/path/to/ggml-base.bin"
+model = "/absolute/path/to/ggml-base.bin" # optional override
+threads = 0
 ```
 
-TermVox does not bundle a model. Model size, language support, speed, accuracy,
-and hardware acceleration depend on your Whisper.cpp build and chosen model.
+The default multilingual `ggml-base.bin` is about 142 MiB and is stored in the
+TermVox data directory, not Git or the executable. `threads = 0` selects
+available CPU parallelism. The baseline build intentionally disables GPU
+acceleration for consistent Linux, macOS, and Windows behavior.
 
 ## OpenAI
 
@@ -94,14 +97,12 @@ provide or implement a compatible executable, and this repository does not
 claim compatibility with a particular Parakeet or Vosk distribution.
 
 Run `termvox models list` to inspect release-reviewed model artifacts. The
-current alpha manifest contains the portable Spanish
-`vosk-model-small-es-0.42` archive with its independently calculated SHA-256.
-TermVox does not list Whisper.cpp or Parakeet downloads until their exact
-upstream artifact, license, size, and checksum have been reviewed.
+manifest includes commit-pinned multilingual Whisper base and tiny models plus
+the portable Spanish `vosk-model-small-es-0.42` archive, with license, size, and
+SHA-256 metadata.
 
 ## Choosing an engine
 
-Use Whisper.cpp or a sidecar when local processing and offline operation are
-priorities and you can manage binaries and models. Use OpenAI when a remote
-service is acceptable. No choice changes the coding agent's own network or
-data-handling behavior.
+Use embedded Whisper for the free local default. Use OpenAI only when a remote
+service is explicitly acceptable. No speech-engine choice changes the coding
+agent's own network or data-handling behavior.

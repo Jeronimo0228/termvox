@@ -10,10 +10,10 @@ SBOMs exist.
 All platforms need:
 
 - Git
-- Rust 1.86 or later, including Cargo
+- Rust 1.88 or later, including Cargo
 - A working microphone and OS permission to use it
 - One [supported coding-agent CLI](agents.md)
-- Either Whisper.cpp plus a model, or an OpenAI API key
+- About 142 MiB of disk space for the default local Whisper model
 
 ## Linux
 
@@ -72,21 +72,21 @@ binary.
 
 ## Speech engine setup
 
-### Whisper.cpp
+### Embedded Whisper (default)
 
-Install Whisper.cpp from a trusted source and ensure `whisper-cli` is on
-`PATH`. Obtain a GGML model separately and verify its checksum against a trusted
-publisher. TermVox can download a model only when you provide both the URL and
-the expected SHA-256:
+No separate inference executable is needed. Install the reviewed multilingual
+base model with:
 
 ```bash
-termvox models download MODEL_URL \
-  --sha256 64_HEXADECIMAL_CHARACTERS \
-  --destination /path/to/ggml-model.bin
+termvox models install default
+termvox models status default
 ```
 
-TermVox verifies the bytes before moving the download into place; it does not
-provide or endorse a model URL or checksum.
+TermVox downloads from a commit-pinned upstream URL, verifies its SHA-256, then
+atomically moves the file into its data directory. Use
+`termvox models remove default` to remove it. Interactive recording commands
+offer the download when it is missing; non-interactive use never consents on
+your behalf.
 
 ### OpenAI
 

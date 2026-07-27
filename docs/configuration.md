@@ -20,7 +20,7 @@ Generate a project file with `termvox init`, a global file with
 ## Complete example
 
 ```toml
-speech_engine = "whispercpp"
+speech_engine = "whisper"
 agent = "codex"
 push_to_talk = "SPACE"
 language = "en"
@@ -37,8 +37,8 @@ vad_threshold_db = -45.0
 vad_silence_ms = 800
 
 [whisper]
-executable = "whisper-cli"
 model = "/home/user/.local/share/termvox/models/ggml-base.bin"
+threads = 0
 
 [openai]
 api_key_env = "OPENAI_API_KEY"
@@ -84,7 +84,7 @@ The same maintained example is available at
 
 | Key | Allowed/current behavior | Default |
 | --- | --- | --- |
-| `speech_engine` | `whispercpp`, `openai`, `parakeet`, or `vosk` | `whispercpp` |
+| `speech_engine` | `whisper` (`whispercpp` legacy alias), `openai`, `parakeet`, or `vosk` | `whisper` |
 | `agent` | `codex`, `claude`, `cursor`, `gemini`, `aider`, or `amp` | `codex` |
 | `push_to_talk` | `SPACE`, `ENTER`, `TAB`, `F1`–`F24`, or one character | `SPACE` |
 | `language` | Passed to the speech engine | `es` |
@@ -108,9 +108,11 @@ voiced frame. This setting trims captured audio; it does not stop recording.
 
 ## Speech providers
 
-`whisper.executable` can be a command on `PATH` or an explicit path.
-`whisper.model` should be an absolute path. Tilde (`~`) expansion is performed
-by shells, not TOML parsers, so a quoted path beginning with `~` may not work.
+Embedded Whisper is the default. Install the reviewed model with
+`termvox models install default`. `whisper.model` should be an absolute path;
+tilde (`~`) expansion is performed by shells, not TOML parsers, so a quoted
+path beginning with `~` may not work. `whisper.threads = 0` selects available
+CPU parallelism.
 
 `openai.api_key_env` is an environment-variable name, not the secret itself.
 Changing `openai.endpoint` redirects both the audio upload and bearer
