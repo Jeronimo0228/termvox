@@ -23,16 +23,39 @@ detect_target() {
   esac
 }
 
+release_tag() {
+  if [[ "$VERSION" == "latest" ]]; then
+    curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
+      | grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]+"' \
+      | head -1 \
+      | cut -d'"' -f4
+    return
+  fi
+  if [[ "$VERSION" == v* ]]; then
+    echo "$VERSION"
+  else
+    echo "v${VERSION}"
+  fi
+}
+
+release_download_url() {
+  local tag asset
+  tag="$(release_tag)" || return 1
+  asset=$1
+  echo "https://github.com/${REPO}/releases/download/${tag}/${asset}"
+}
+
 echo "TermVox installer"
 echo "================="
 
 mkdir -p "$PREFIX/bin"
 
 install_from_release() {
-  local target asset ext tmp
+  local target asset ext tmp tag
   target="$(detect_target)" || return 1
+  tag="$(release_tag)" || return 1
   if [[ "$VERSION" == "latest" ]]; then
-    asset=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/${VERSION}" \
+    asset=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
       | grep -oE "termvox-v[^\"]+-${target}\\.(tar\\.gz|zip)" | head -1) || return 1
   else
     asset="termvox-v${VERSION#v}-${target}"
@@ -45,23 +68,23 @@ install_from_release() {
   [[ -n "$asset" ]] || return 1
   ext="${asset##*.}"
   tmp="$(mktemp -d)"
-  cleanup() { rm -rf "$tmp"; }
-  trap cleanup EXIT
-  echo "Downloading $asset ..."
-  curl -fsSL -o "$tmp/$asset" \
-    "https://github.com/${REPO}/releases/${VERSION}/download/${asset}"
-  if curl -fsSL -o "$tmp/$asset.sha256" \
-    "https://github.com/${REPO}/releases/${VERSION}/download/${asset}.sha256" 2>/dev/null; then
-    (cd "$tmp" && sha256sum -c "$asset.sha256")
-  fi
-  if [[ "$ext" == "gz" ]]; then
-    tar -xzf "$tmp/$asset" -C "$tmp"
-    install -m 0755 "$tmp/termvox" "$PREFIX/bin/termvox"
-  else
-    unzip -q "$tmp/$asset" -d "$tmp"
-    install -m 0755 "$tmp/termvox.exe" "$PREFIX/bin/termvox.exe"
-  fi
-  return 0
+  (
+    set -euo pipefail
+    echo "Downloading $asset from release ${tag} ..."
+    curl -fsSL -o "$tmp/$asset" "$(release_download_url "$asset")"
+    if curl -fsSL -o "$tmp/$asset.sha256" "$(release_download_url "$asset.sha256")" 2>/dev/null; then
+      (cd "$tmp" && sha256sum -c "$asset.sha256")
+    fi
+    if [[ "$ext" == "gz" ]]; then
+      tar -xzf "$tmp/$asset" -C "$tmp"
+      install -m 0755 "$tmp/termvox" "$PREFIX/bin/termvox"
+    else
+      unzip -q "$tmp/$asset" -d "$tmp"
+      install -m 0755 "$tmp/termvox.exe" "$PREFIX/bin/termvox.exe"
+    fi
+  )
+  rm -rf "$tmp"
+  command -v "$PREFIX/bin/termvox" >/dev/null 2>&1 || command -v "$PREFIX/bin/termvox.exe" >/dev/null 2>&1
 }
 
 install_from_source() {
@@ -76,10 +99,12 @@ install_from_source() {
   local branch="${TERMVOX_INSTALL_BRANCH:-main}"
   local tmp
   tmp="$(mktemp -d)"
-  cleanup() { rm -rf "$tmp"; }
-  trap cleanup EXIT
-  git clone --depth 1 --branch "$branch" "https://github.com/${REPO}.git" "$tmp/termvox"
-  cargo install --path "$tmp/termvox/crates/termvox-cli" --force --root "$PREFIX"
+  (
+    set -euo pipefail
+    git clone --depth 1 --branch "$branch" "https://github.com/${REPO}.git" "$tmp/termvox"
+    cargo install --path "$tmp/termvox/crates/termvox-cli" --force --root "$PREFIX"
+  )
+  rm -rf "$tmp"
 }
 
 if [[ "$INSTALL_SOURCE" == "1" ]]; then
