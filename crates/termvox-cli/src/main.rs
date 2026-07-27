@@ -1,10 +1,17 @@
+mod bench;
 mod cli;
 mod clipboard;
 mod commands;
+#[cfg(unix)]
+mod daemon;
+mod delivery;
 mod doctor;
+mod paste;
+mod presets;
 mod runtime;
 mod session_ui;
 mod setup;
+mod telemetry;
 mod ui;
 
 use anyhow::Result;

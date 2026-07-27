@@ -1,6 +1,9 @@
 use anyhow::Result;
 use termvox_audio::input_devices;
-use termvox_core::{AgentAdapter, AppConfig, SpeechEngineKind, agent_config_warnings, agent_hints};
+use termvox_core::{
+    AgentAdapter, AppConfig, SpeechEngineKind, agent_config_warnings, agent_hints,
+    detect_environment,
+};
 use termvox_hotkeys::detect_support;
 
 use crate::runtime::{all_agents, speech_engine};
@@ -80,6 +83,22 @@ pub(crate) async fn run(config: AppConfig, json: bool) -> Result<()> {
         "  display = {}",
         profile.resolved_display(config.agent).as_str()
     );
+    if profile.resolved_display(config.agent) == termvox_core::AgentDisplayMode::Companion {
+        println!(
+            "  delivery = {}",
+            profile.resolved_delivery(config.agent).as_str()
+        );
+    }
+    let env = detect_environment();
+    if let Some(ram_mb) = env.total_ram_mb {
+        println!("  host_ram = {ram_mb} MiB");
+    }
+    if env.wayland {
+        println!("  hint: Wayland detected — toggle mode is enabled automatically when configured.");
+    }
+    if env.low_ram {
+        println!("  hint: Low-RAM host — fast profile and whisper-tiny are recommended.");
+    }
     for warning in agent_config_warnings(&config) {
         println!("[!!] {warning}");
     }

@@ -136,7 +136,7 @@ fn load_whisper_context(
     }
     whisper_rs::install_logging_hooks();
     let mut parameters = WhisperContextParameters::default();
-    parameters.use_gpu(false);
+    parameters.use_gpu(config.use_gpu);
     let loaded = Arc::new(
         WhisperContext::new_with_params(&config.model, parameters).map_err(|error| {
             TermVoxError::Speech(format!(

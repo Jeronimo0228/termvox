@@ -2,6 +2,8 @@ use std::io::{self, Write};
 
 use termvox_core::{AgentDisplayMode, AgentKind, AgentUiTheme, agent_ui};
 
+use crate::delivery::DeliveryOutcome;
+
 pub(crate) struct SessionUi {
     theme: AgentUiTheme,
     mode: AgentDisplayMode,
@@ -169,11 +171,33 @@ impl SessionUi {
                     );
                 }
                 eprintln!(
-                    "{}{duration_ms} ms · copied to clipboard · paste into {}{}",
+                    "{}{duration_ms} ms · copied and pasted into {}{}",
                     self.theme.dim, self.theme.brand, self.theme.reset
                 );
             }
         }
+    }
+
+    pub(crate) fn show_delivery(&self, outcome: &DeliveryOutcome) {
+        if self.mode == AgentDisplayMode::Companion {
+            let detail = match (outcome.clipboard, outcome.paste) {
+                (true, true) => "Copied and pasted",
+                (true, false) => "Copied to clipboard",
+                (false, true) => "Pasted into focused window",
+                (false, false) => "Delivered",
+            };
+            self.write_status(&format!(
+                "{}{} {detail}{}",
+                self.theme.accent, self.theme.prompt_glyph, self.theme.reset
+            ));
+        }
+    }
+
+    pub(crate) fn show_delivery_failed(&self, error: &str) {
+        eprintln!(
+            "{}{} Delivery failed: {error}{}",
+            self.theme.dim, self.theme.prompt_glyph, self.theme.reset
+        );
     }
 
     pub(crate) fn show_clipboard_copied(&self) {

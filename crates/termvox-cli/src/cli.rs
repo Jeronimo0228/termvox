@@ -4,7 +4,9 @@ use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
 
-use crate::{commands, doctor, runtime, setup};
+use crate::{bench, commands, doctor, runtime, setup};
+#[cfg(unix)]
+use crate::daemon;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -26,18 +28,33 @@ enum Commands {
         global: bool,
         #[arg(long)]
         force: bool,
+        #[arg(long, value_name = "PRESET")]
+        preset: Option<String>,
     },
     Setup {
         #[arg(long)]
         global: bool,
         #[arg(long)]
         force: bool,
+        #[arg(long, value_name = "PRESET")]
+        preset: Option<String>,
     },
     Start {
         #[arg(long)]
         toggle: bool,
         #[arg(long, value_name = "SHORTCUT")]
         global_hotkey: Option<String>,
+    },
+    #[cfg(unix)]
+    Daemon {
+        #[command(subcommand)]
+        command: DaemonCommand,
+    },
+    #[cfg(unix)]
+    Talk,
+    Bench {
+        #[arg(long, default_value_t = 5)]
+        runs: u32,
     },
     Doctor {
         #[arg(long)]
@@ -72,6 +89,17 @@ enum Commands {
         #[arg(long)]
         output: Option<PathBuf>,
     },
+}
+
+#[cfg(unix)]
+#[derive(Debug, Subcommand)]
+enum DaemonCommand {
+    Start {
+        #[arg(long)]
+        background: bool,
+    },
+    Stop,
+    Status,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -122,8 +150,16 @@ pub(crate) enum PluginCommand {
 pub(crate) async fn run() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
-        Commands::Init { global, force } => setup::init_config(global, force, false)?,
-        Commands::Setup { global, force } => setup::init_config(global, force, true)?,
+        Commands::Init {
+            global,
+            force,
+            preset,
+        } => setup::init_config(global, force, false, preset.as_deref())?,
+        Commands::Setup {
+            global,
+            force,
+            preset,
+        } => setup::init_config(global, force, true, preset.as_deref())?,
         Commands::Start {
             toggle,
             global_hotkey,
@@ -134,6 +170,45 @@ pub(crate) async fn run() -> Result<()> {
                 global_hotkey.as_deref(),
             )
             .await?;
+        }
+        #[cfg(unix)]
+        Commands::Daemon { command } => match command {
+            DaemonCommand::Start { background } => {
+                daemon::run(
+                    daemon::DaemonAction::Start,
+                    setup::load_config(cli.config.as_deref())?,
+                    background,
+                )
+                .await?;
+            }
+            DaemonCommand::Stop => {
+                daemon::run(
+                    daemon::DaemonAction::Stop,
+                    setup::load_config(cli.config.as_deref())?,
+                    false,
+                )
+                .await?
+            }
+            DaemonCommand::Status => {
+                daemon::run(
+                    daemon::DaemonAction::Status,
+                    setup::load_config(cli.config.as_deref())?,
+                    false,
+                )
+                .await?
+            }
+        },
+        #[cfg(unix)]
+        Commands::Talk => {
+            daemon::run(
+                daemon::DaemonAction::Talk,
+                setup::load_config(cli.config.as_deref())?,
+                false,
+            )
+            .await?;
+        }
+        Commands::Bench { runs } => {
+            bench::run(setup::load_config(cli.config.as_deref())?, runs).await?;
         }
         Commands::Doctor { json } => {
             doctor::run(setup::load_config(cli.config.as_deref())?, json).await?;
