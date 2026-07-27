@@ -92,7 +92,7 @@ for archive in "${archives[@]}"; do
     cosign verify-blob \
       --bundle "$bundle" \
       --certificate-identity-regexp \
-        '^https://github\.com/Jeronimo0228/termvox/\.github/workflows/release\.yml@refs/(heads|tags)/.+' \
+        '^https://github\.com/Jeronimo0228/termvox/\.github/workflows/(release|publish-release)\.yml@refs/(heads|tags)/.+' \
       --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
       "$archive"
   elif [[ ${CI:-} == "true" ]]; then
