@@ -71,6 +71,14 @@ jobs:
           version="${tag#v}"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Install Windows build tools
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install cmake ninja llvm -y --no-progress
+          "LIBCLANG_PATH=C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "CMAKE_GENERATOR=Ninja" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "WHISPER_DONT_GENERATE_BINDINGS=1" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Build locked release binary
         run: cargo build --profile dist --locked --target ${{ matrix.target }} --bin termvox
       - name: Set reproducible build timestamp

@@ -195,7 +195,10 @@ impl AgentProfile {
 
     #[must_use]
     pub fn resolved_paste_window_title(&self, kind: AgentKind) -> Option<&str> {
-        if let Some(title) = self.paste_window_title.as_deref().filter(|title| !title.is_empty())
+        if let Some(title) = self
+            .paste_window_title
+            .as_deref()
+            .filter(|title| !title.is_empty())
         {
             return Some(title);
         }
@@ -290,6 +293,7 @@ pub fn agent_hints(kind: AgentKind) -> &'static [&'static str] {
         AgentKind::Cursor => &[
             "Default display is companion — transcribe, copy, and auto-paste into the Cursor window.",
             "Set agents.cursor.paste_window_title to match your Cursor window title if focus fails.",
+            "On Windows, auto-paste uses PowerShell SendKeys; on Linux use wtype or xdotool.",
             "Set agents.cursor.trust_workspace = true for non-interactive workspace trust (-f).",
             "On Wayland, prefer `termvox start --toggle` if hold-to-talk never transcribes.",
         ],

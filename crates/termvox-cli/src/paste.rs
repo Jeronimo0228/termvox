@@ -4,7 +4,14 @@ use anyhow::{Context, Result, bail};
 
 /// Sends Ctrl+V to the focused window (best-effort, platform-specific).
 pub(crate) fn paste_focused() -> Result<()> {
-    paste_with_backends(paste_backends())
+    #[cfg(windows)]
+    {
+        return windows::paste_focused();
+    }
+    #[cfg(not(windows))]
+    {
+        paste_with_backends(paste_backends_unix())
+    }
 }
 
 pub(crate) fn paste_to_target(window_title: Option<&str>) -> Result<()> {
@@ -15,7 +22,23 @@ pub(crate) fn paste_to_target(window_title: Option<&str>) -> Result<()> {
 }
 
 pub(crate) fn focus_window_title(substring: &str) -> Result<()> {
-    for (program, args) in focus_backends(substring) {
+    #[cfg(windows)]
+    {
+        return windows::focus_window_title(substring);
+    }
+    #[cfg(not(windows))]
+    {
+        focus_window_title_unix(substring)
+    }
+}
+
+pub(crate) fn paste_after_clipboard_delay() {
+    std::thread::sleep(Duration::from_millis(120));
+}
+
+#[cfg(not(windows))]
+fn focus_window_title_unix(substring: &str) -> Result<()> {
+    for (program, args) in focus_backends_unix(substring) {
         if !command_exists(program) {
             continue;
         }
@@ -32,10 +55,6 @@ pub(crate) fn focus_window_title(substring: &str) -> Result<()> {
     bail!(
         "could not focus a window titled like '{substring}'; install wmctrl or xdotool, or set agents.<agent>.paste_window_title"
     );
-}
-
-pub(crate) fn paste_after_clipboard_delay() {
-    std::thread::sleep(Duration::from_millis(120));
 }
 
 fn paste_with_backends(
@@ -57,7 +76,8 @@ fn paste_with_backends(
     bail!("auto-paste unavailable; install wtype (Wayland), ydotool, or xdotool (X11)");
 }
 
-fn focus_backends(substring: &str) -> Vec<(&'static str, Vec<String>)> {
+#[cfg(not(windows))]
+fn focus_backends_unix(substring: &str) -> Vec<(&'static str, Vec<String>)> {
     vec![
         ("wmctrl", vec!["-a".into(), substring.into()]),
         (
@@ -94,7 +114,8 @@ fn command_exists(program: &str) -> bool {
     false
 }
 
-fn paste_backends() -> [(&'static str, &'static [&'static str], &'static str); 3] {
+#[cfg(not(windows))]
+fn paste_backends_unix() -> [(&'static str, &'static [&'static str], &'static str); 3] {
     [
         (
             "wtype",
@@ -110,13 +131,50 @@ fn paste_backends() -> [(&'static str, &'static [&'static str], &'static str); 3
     ]
 }
 
+#[cfg(windows)]
+mod windows {
+    use super::*;
+
+    pub(super) fn focus_window_title(substring: &str) -> Result<()> {
+        let escaped = substring.replace('\'', "''");
+        let script = format!(
+            "$shell = New-Object -ComObject WScript.Shell; if (-not $shell.AppActivate('{escaped}')) {{ exit 1 }}"
+        );
+        let status = Command::new("powershell")
+            .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+            .status()
+            .context("failed to run PowerShell for window focus")?;
+        if status.success() {
+            std::thread::sleep(Duration::from_millis(120));
+            return Ok(());
+        }
+        bail!(
+            "could not focus a window titled like '{substring}'; adjust agents.<agent>.paste_window_title"
+        );
+    }
+
+    pub(super) fn paste_focused() -> Result<()> {
+        let script = "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^v')";
+        let status = Command::new("powershell")
+            .args(["-NoProfile", "-NonInteractive", "-Command", script])
+            .status()
+            .context("failed to run PowerShell for auto-paste")?;
+        if status.success() {
+            Ok(())
+        } else {
+            bail!("auto-paste failed; ensure PowerShell is available")
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
+    #[cfg(not(windows))]
     fn focus_backends_include_wmctrl_and_xdotool() {
-        let backends = focus_backends("Cursor");
+        let backends = focus_backends_unix("Cursor");
         assert_eq!(backends.len(), 3);
         assert_eq!(backends[0].0, "wmctrl");
         assert_eq!(backends[0].1[1], "Cursor");

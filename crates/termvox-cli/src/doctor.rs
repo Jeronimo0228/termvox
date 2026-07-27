@@ -94,7 +94,14 @@ pub(crate) async fn run(config: AppConfig, json: bool) -> Result<()> {
         println!("  host_ram = {ram_mb} MiB");
     }
     if env.wayland {
-        println!("  hint: Wayland detected — toggle mode is enabled automatically when configured.");
+        println!(
+            "  hint: Wayland detected — toggle mode is enabled automatically when configured."
+        );
+    }
+    if env.windows {
+        println!(
+            "  hint: Windows detected — toggle mode and PowerShell auto-paste are recommended."
+        );
     }
     if env.low_ram {
         println!("  hint: Low-RAM host — fast profile and whisper-tiny are recommended.");

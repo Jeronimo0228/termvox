@@ -1,11 +1,6 @@
 #[cfg(feature = "embedded-whisper")]
 use std::io::IsTerminal;
-use std::{
-    io,
-    path::PathBuf,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{io, path::PathBuf, sync::Arc, time::Duration};
 
 use anyhow::{Result, bail};
 use crossterm::{
@@ -34,11 +29,12 @@ use crate::{
     ui::{RawMode, confirm, parse_key, print_agent_event},
 };
 
-pub(crate) fn resolve_toggle(config: &AppConfig, toggle_flag: bool) -> bool {
+pub fn resolve_toggle(config: &AppConfig, toggle_flag: bool) -> bool {
     if toggle_flag {
         return true;
     }
-    config.runtime.auto_toggle_on_wayland && detect_environment().wayland
+    let env = detect_environment();
+    config.runtime.auto_toggle_on_wayland && (env.wayland || env.windows)
 }
 
 pub(crate) async fn test_audio(config: AppConfig, seconds: u64) -> Result<()> {
@@ -601,10 +597,14 @@ pub(crate) fn all_agents() -> [CliAgent; 6] {
 }
 
 fn schedule_prewarm(speech: Arc<dyn SpeechEngine>, whisper: &termvox_core::WhisperConfig) {
-    if !whisper.prewarm_on_start {
+    if whisper.prewarm_on_start {
+        tokio::spawn(async move {
+            let _ = speech.prewarm().await;
+        });
         return;
     }
     tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_millis(1500)).await;
         let _ = speech.prewarm().await;
     });
 }

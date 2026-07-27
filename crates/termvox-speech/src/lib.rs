@@ -29,7 +29,9 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 
 #[cfg(feature = "embedded-whisper")]
-use whisper_rs::{FullParams, SamplingStrategy, SegmentCallbackData, WhisperContext, WhisperContextParameters};
+use whisper_rs::{
+    FullParams, SamplingStrategy, SegmentCallbackData, WhisperContext, WhisperContextParameters,
+};
 
 pub struct EmbeddedWhisperEngine {
     #[cfg_attr(not(feature = "embedded-whisper"), allow(dead_code))]
@@ -222,7 +224,9 @@ fn transcribe_embedded(
             if streaming_cancel.is_cancelled() {
                 return;
             }
-            let mut accumulated = partial_acc.lock().unwrap_or_else(|error| error.into_inner());
+            let mut accumulated = partial_acc
+                .lock()
+                .unwrap_or_else(|error| error.into_inner());
             accumulated.push_str(&segment.text);
             on_partial(accumulated.clone());
         });

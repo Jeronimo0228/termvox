@@ -4,9 +4,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
 
-use crate::{bench, commands, doctor, runtime, setup};
-#[cfg(unix)]
-use crate::daemon;
+use crate::{bench, commands, daemon, doctor, runtime, setup};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -45,12 +43,10 @@ enum Commands {
         #[arg(long, value_name = "SHORTCUT")]
         global_hotkey: Option<String>,
     },
-    #[cfg(unix)]
     Daemon {
         #[command(subcommand)]
         command: DaemonCommand,
     },
-    #[cfg(unix)]
     Talk,
     Bench {
         #[arg(long, default_value_t = 5)]
@@ -91,7 +87,6 @@ enum Commands {
     },
 }
 
-#[cfg(unix)]
 #[derive(Debug, Subcommand)]
 enum DaemonCommand {
     Start {
@@ -171,7 +166,6 @@ pub(crate) async fn run() -> Result<()> {
             )
             .await?;
         }
-        #[cfg(unix)]
         Commands::Daemon { command } => match command {
             DaemonCommand::Start { background } => {
                 daemon::run(
@@ -198,7 +192,6 @@ pub(crate) async fn run() -> Result<()> {
                 .await?
             }
         },
-        #[cfg(unix)]
         Commands::Talk => {
             daemon::run(
                 daemon::DaemonAction::Talk,
