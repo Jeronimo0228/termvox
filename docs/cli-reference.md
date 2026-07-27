@@ -75,6 +75,29 @@ authentication; another process running as the same OS user can manipulate it.
 Lists release-reviewed model artifacts from the bundled manifest, including the
 default embedded Whisper base model and optional sidecar models.
 
+### `termvox init [--global] [--force] [--preset PRESET]`
+
+Creates a starter config. Presets: `cursor`, `codex`, `claude`, `gemini`, `rust-web`.
+
+Example:
+
+```bash
+termvox init --preset cursor --force
+```
+
+### `termvox daemon start [--background]`
+
+Unix-only background voice service with global hotkey (default `ALT+SPACE`). See
+[Daemon mode](daemon.md).
+
+### `termvox talk`
+
+Toggle recording on a running daemon (IPC).
+
+### `termvox bench [--runs N]`
+
+Print JSON latency report (P50/P95) for the configured Whisper model.
+
 ### `termvox models install [ID]`
 
 Downloads and verifies a reviewed model. `default` installs the multilingual

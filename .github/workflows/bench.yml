@@ -1,0 +1,35 @@
+name: Benchmark
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  whisper-latency:
+    name: whisper latency (${{ matrix.profile }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        profile: [fast, accurate]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Linux audio headers
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libasound2-dev
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0
+      - run: cargo build --release -p termvox
+      - name: Install model and run benchmark
+        run: |
+          ./target/release/termvox models install ${{ matrix.profile == 'fast' && 'default' || 'accurate' }}
+          cat > termvox.toml <<EOF
+          performance_profile = "${{ matrix.profile }}"
+          agent = "cursor"
+          [agents.cursor]
+          display = "companion"
+          delivery = "both"
+          EOF
+          TERMVOX_BENCH_RUNS=5 ./scripts/bench.sh
