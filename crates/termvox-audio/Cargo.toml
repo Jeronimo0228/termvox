@@ -1,0 +1,32 @@
+[package]
+name = "termvox-audio"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Cross-platform audio capture and voice activity detection for TermVox"
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+include = ["src/**", "Cargo.toml", "../../README.md", "../../LICENSE-MIT", "../../LICENSE-APACHE"]
+
+[features]
+default = ["native-audio"]
+native-audio = ["dep:cpal", "dep:crossbeam-queue"]
+
+[dependencies]
+async-trait = "0.1.91"
+cpal = { version = "0.18.1", optional = true }
+thiserror = "2.0.19"
+tokio = { version = "1.53.1", features = ["sync", "rt", "macros"] }
+tokio-util = { version = "0.7.19", features = ["rt"] }
+tracing = "0.1.44"
+termvox-core = { version = "0.1.0-alpha.1", path = "../termvox-core" }
+crossbeam-queue = { version = "0.3.13", optional = true, features = ["alloc"] }
+
+[lints]
+workspace = true

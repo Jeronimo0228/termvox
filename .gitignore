@@ -1,0 +1,7 @@
+/target/
+termvox.toml
+*.wav
+*.bin
+*.download
+.env
+.DS_Store

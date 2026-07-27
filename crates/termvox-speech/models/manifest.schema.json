@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TermVox verified speech model manifest",
+  "type": "object",
+  "required": ["schema_version", "artifacts"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "provider",
+          "version",
+          "license",
+          "platform",
+          "size_bytes",
+          "url",
+          "sha256"
+        ],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "provider": {
+            "enum": ["whispercpp", "parakeet", "vosk"]
+          },
+          "version": { "type": "string", "minLength": 1 },
+          "license": { "type": "string", "minLength": 1 },
+          "platform": { "type": "string", "minLength": 1 },
+          "size_bytes": { "type": "integer", "minimum": 1 },
+          "url": { "type": "string", "format": "uri" },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[A-Fa-f0-9]{64}$"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,27 @@
+[package]
+name = "termvox-agents"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Safe adapters for supported coding-agent CLIs"
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+include = ["src/**", "tests/**", "Cargo.toml", "../../README.md", "../../LICENSE-MIT", "../../LICENSE-APACHE"]
+
+[dependencies]
+async-trait = "0.1.91"
+serde_json = "1.0.151"
+tokio = { version = "1.53.1", features = ["process", "io-util", "time", "rt", "macros", "sync"] }
+tokio-util = { version = "0.7.19", features = ["rt"] }
+tracing = "0.1.44"
+termvox-core = { version = "0.1.0-alpha.1", path = "../termvox-core" }
+which = "8.0.5"
+
+[lints]
+workspace = true

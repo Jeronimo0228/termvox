@@ -1,0 +1,33 @@
+//! Shared contracts, configuration, pipeline, and safety policy for `TermVox`.
+
+mod config;
+mod events;
+mod pipeline;
+mod policy;
+mod sessions;
+
+pub use config::*;
+pub use events::*;
+pub use pipeline::*;
+pub use policy::*;
+pub use sessions::*;
+
+use thiserror::Error;
+
+pub type Result<T> = std::result::Result<T, TermVoxError>;
+
+#[derive(Debug, Error)]
+pub enum TermVoxError {
+    #[error("configuration error: {0}")]
+    Config(String),
+    #[error("audio error: {0}")]
+    Audio(String),
+    #[error("speech engine error: {0}")]
+    Speech(String),
+    #[error("agent error: {0}")]
+    Agent(String),
+    #[error("operation cancelled")]
+    Cancelled,
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+}

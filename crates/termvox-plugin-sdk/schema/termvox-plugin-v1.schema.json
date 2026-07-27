@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Jeronimo0228/termvox/blob/main/crates/termvox-plugin-sdk/schema/termvox-plugin-v1.schema.json",
+  "title": "TermVox Plugin Protocol v1",
+  "oneOf": [
+    { "$ref": "#/$defs/request" },
+    { "$ref": "#/$defs/response" },
+    { "$ref": "#/$defs/event" }
+  ],
+  "$defs": {
+    "request": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "method", "params"],
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "type": "integer", "minimum": 0 },
+        "method": {
+          "enum": ["initialize", "probe", "start", "send", "cancel", "shutdown"]
+        },
+        "params": {}
+      },
+      "additionalProperties": false
+    },
+    "response": {
+      "type": "object",
+      "required": ["jsonrpc", "id"],
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "type": "integer", "minimum": 0 },
+        "result": {},
+        "error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "properties": {
+            "code": { "type": "integer" },
+            "message": { "type": "string" }
+          }
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "required": ["jsonrpc", "method", "params"],
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "method": { "const": "event" },
+        "params": {
+          "type": "object",
+          "required": ["session_id", "event"],
+          "properties": {
+            "session_id": { "type": "string" },
+            "event": {}
+          }
+        }
+      }
+    }
+  }
+}
