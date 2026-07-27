@@ -67,6 +67,18 @@ pub fn apply_performance_profile(config: &mut AppConfig) {
     }
 }
 
+/// Applies non-destructive host hints when `auto_tune_from_environment` is enabled.
+pub fn apply_environment_hints(config: &mut AppConfig) {
+    if !config.auto_tune_from_environment {
+        return;
+    }
+    let env = crate::detect_environment();
+    if env.low_ram && config.performance_profile != PerformanceProfile::Custom {
+        config.performance_profile = PerformanceProfile::Fast;
+        crate::apply_performance_profile(config);
+    }
+}
+
 fn data_path(relative: &str) -> PathBuf {
     dirs::data_dir()
         .unwrap_or_else(|| PathBuf::from("."))

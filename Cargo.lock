@@ -2362,6 +2362,7 @@ dependencies = [
  "clap_mangen",
  "crossterm",
  "dirs",
+ "serde",
  "serde_json",
  "termvox-agents",
  "termvox-audio",

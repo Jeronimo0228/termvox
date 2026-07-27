@@ -46,6 +46,8 @@ pub struct RuntimeLimits {
     pub shutdown_timeout_seconds: u64,
     pub max_output_bytes: usize,
     pub max_json_frame_bytes: usize,
+    /// Prefer toggle push-to-talk on Wayland when hold-to-talk is unreliable.
+    pub auto_toggle_on_wayland: bool,
 }
 
 impl Default for RuntimeLimits {
@@ -56,6 +58,7 @@ impl Default for RuntimeLimits {
             shutdown_timeout_seconds: 5,
             max_output_bytes: 8 * 1024 * 1024,
             max_json_frame_bytes: 1024 * 1024,
+            auto_toggle_on_wayland: true,
         }
     }
 }
@@ -114,6 +117,10 @@ pub struct AppConfig {
     pub vosk: SidecarSpeechConfig,
     pub plugins: Vec<PluginConfig>,
     pub pipeline: PipelineConfig,
+    pub daemon: DaemonConfig,
+    pub telemetry: TelemetryConfig,
+    /// Apply host hints (Wayland toggle, RAM profile suggestions).
+    pub auto_tune_from_environment: bool,
     /// Deprecated: use `[agents.cursor]`. Kept for backward-compatible loading only.
     #[serde(default, skip_serializing)]
     cursor: Option<LegacyCursorConfig>,
@@ -140,6 +147,9 @@ impl Default for AppConfig {
             vosk: SidecarSpeechConfig::vosk_default(),
             plugins: Vec::new(),
             pipeline: PipelineConfig::default(),
+            daemon: DaemonConfig::default(),
+            telemetry: TelemetryConfig::default(),
+            auto_tune_from_environment: true,
             cursor: None,
         }
     }
@@ -182,6 +192,8 @@ pub struct WhisperConfig {
     pub prewarm_on_start: bool,
     /// Tune Whisper for short voice commands (lower latency, less context RAM).
     pub optimize_for_latency: bool,
+    /// Use GPU acceleration when the Whisper build supports it.
+    pub use_gpu: bool,
 }
 
 impl Default for WhisperConfig {
@@ -192,6 +204,39 @@ impl Default for WhisperConfig {
             max_threads: 4,
             prewarm_on_start: false,
             optimize_for_latency: true,
+            use_gpu: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DaemonConfig {
+    pub hotkey: String,
+    pub skip_confirmation: bool,
+}
+
+impl Default for DaemonConfig {
+    fn default() -> Self {
+        Self {
+            hotkey: "ALT+SPACE".into(),
+            skip_confirmation: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct TelemetryConfig {
+    pub enabled: bool,
+    pub local_metrics_path: PathBuf,
+}
+
+impl Default for TelemetryConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            local_metrics_path: data_path("termvox/metrics.jsonl"),
         }
     }
 }
@@ -304,6 +349,7 @@ impl AppConfig {
             .map_err(|error| TermVoxError::Config(error.to_string()))?;
         config.normalize_legacy();
         crate::apply_performance_profile(&mut config);
+        crate::apply_environment_hints(&mut config);
         Ok(config)
     }
 

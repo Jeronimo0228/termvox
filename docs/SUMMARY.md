@@ -6,6 +6,7 @@
 - [Speech engines](speech-engines.md)
 - [Configuration](configuration.md)
 - [Performance](performance.md)
+- [Daemon mode](daemon.md)
 - [CLI reference](cli-reference.md)
 - [Privacy and security](privacy-security.md)
 - [Architecture](architecture.md)

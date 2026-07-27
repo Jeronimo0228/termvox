@@ -1,6 +1,11 @@
 #[cfg(feature = "embedded-whisper")]
 use std::io::IsTerminal;
-use std::{io, path::PathBuf, sync::Arc, time::Duration};
+use std::{
+    io,
+    path::PathBuf,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use anyhow::{Result, bail};
 use crossterm::{
@@ -12,7 +17,7 @@ use termvox_audio::{AudioRecorder, trim_with_vad_hangover};
 use termvox_core::{
     AgentAdapter, AgentDisplayMode, AgentKind, AgentRequest, AgentSession, AppConfig,
     PromptPipeline, SpeechEngine, SpeechEngineKind, TranscriptionOptions, assess_prompt,
-    whisper_initial_prompt,
+    detect_environment, whisper_initial_prompt,
 };
 use termvox_hotkeys::{HotkeyRegistration, TriggerState};
 use termvox_plugin_sdk::PluginAgentAdapter;
@@ -23,10 +28,18 @@ use tokio_util::sync::CancellationToken;
 
 use crate::{
     cli::RecordAction,
-    clipboard,
+    delivery,
     session_ui::SessionUi,
+    telemetry,
     ui::{RawMode, confirm, parse_key, print_agent_event},
 };
+
+pub(crate) fn resolve_toggle(config: &AppConfig, toggle_flag: bool) -> bool {
+    if toggle_flag {
+        return true;
+    }
+    config.runtime.auto_toggle_on_wayland && detect_environment().wayland
+}
 
 pub(crate) async fn test_audio(config: AppConfig, seconds: u64) -> Result<()> {
     let speech = ensure_speech_engine(&config).await?;
@@ -62,6 +75,7 @@ pub(crate) async fn start(
     toggle: bool,
     global_hotkey: Option<&str>,
 ) -> Result<()> {
+    let toggle = resolve_toggle(&config, toggle);
     let agent = selected_agent(&config)?;
     let info = agent.probe().await;
     if !info.installed && !is_companion_mode(&config) {
@@ -97,6 +111,7 @@ pub(crate) async fn start(
                         agent.as_ref(),
                         &session,
                         shutdown.child_token(),
+                        false,
                     )
                     .await?;
                     continue;
@@ -118,6 +133,7 @@ pub(crate) async fn start(
                             agent.as_ref(),
                             &session,
                             shutdown.child_token(),
+                            false,
                         )
                         .await?;
                     }
@@ -131,6 +147,7 @@ pub(crate) async fn start(
                             agent.as_ref(),
                             &session,
                             shutdown.child_token(),
+                            false,
                         )
                         .await?;
                     }
@@ -162,6 +179,7 @@ pub(crate) async fn start(
                     agent.as_ref(),
                     &session,
                     shutdown.child_token(),
+                    true,
                 )
                 .await
                 {
@@ -200,6 +218,7 @@ pub(crate) async fn start(
                 agent.as_ref(),
                 &session,
                 shutdown.child_token(),
+                true,
             )
             .await
             {
@@ -214,6 +233,94 @@ pub(crate) async fn start(
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
+pub(crate) async fn start_daemon_session(
+    config: AppConfig,
+    hotkey: &str,
+    ipc_toggle: Arc<std::sync::atomic::AtomicBool>,
+) -> Result<()> {
+    use crate::daemon;
+
+    let agent = selected_agent(&config)?;
+    let speech = ensure_speech_engine(&config).await?;
+    schedule_prewarm(Arc::clone(&speech), &config.whisper);
+    let session = agent.start().await?;
+    let ui = session_ui(&config, true);
+    let registration = HotkeyRegistration::register(hotkey)?;
+    ui.show_global_ready(hotkey);
+    let shutdown = CancellationToken::new();
+    let signal_cancel = shutdown.clone();
+    tokio::spawn(async move {
+        if tokio::signal::ctrl_c().await.is_ok() {
+            signal_cancel.cancel();
+        }
+    });
+    let mut recorder: Option<AudioRecorder> = None;
+    while !shutdown.is_cancelled() {
+        if daemon::take_toggle(&ipc_toggle) {
+            if recorder.is_none() {
+                recorder = Some(AudioRecorder::start(&config.audio)?);
+                ui.show_recording();
+            } else {
+                let audio = recorder.take().expect("checked above").stop().await?;
+                process_utterance(
+                    &config,
+                    &ui,
+                    audio,
+                    speech.as_ref(),
+                    agent.as_ref(),
+                    &session,
+                    shutdown.child_token(),
+                    false,
+                )
+                .await?;
+            }
+        }
+        if let Some(recorder_ref) = &recorder {
+            if config.audio.auto_stop_on_silence && recorder_ref.auto_stop_triggered() {
+                let audio = recorder.take().expect("checked above").stop().await?;
+                process_utterance(
+                    &config,
+                    &ui,
+                    audio,
+                    speech.as_ref(),
+                    agent.as_ref(),
+                    &session,
+                    shutdown.child_token(),
+                    false,
+                )
+                .await?;
+                continue;
+            }
+        }
+        if let Some(state) = registration.poll() {
+            if matches!(state, TriggerState::Pressed) {
+                if recorder.is_none() {
+                    recorder = Some(AudioRecorder::start(&config.audio)?);
+                    ui.show_recording();
+                } else {
+                    let audio = recorder.take().expect("checked above").stop().await?;
+                    process_utterance(
+                        &config,
+                        &ui,
+                        audio,
+                        speech.as_ref(),
+                        agent.as_ref(),
+                        &session,
+                        shutdown.child_token(),
+                        false,
+                    )
+                    .await?;
+                }
+            }
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    agent.cancel(&session).await?;
+    agent.shutdown().await?;
+    Ok(())
+}
+
 async fn process_utterance(
     config: &AppConfig,
     ui: &SessionUi,
@@ -222,12 +329,14 @@ async fn process_utterance(
     agent: &dyn AgentAdapter,
     session: &AgentSession,
     cancel: CancellationToken,
+    interactive_terminal: bool,
 ) -> Result<()> {
     let audio = trim_with_vad_hangover(
         &audio,
         config.audio.vad_threshold_db,
         config.audio.vad_silence_ms,
     );
+    let audio_seconds = audio.duration_seconds();
     if audio.samples.is_empty() {
         ui.show_no_speech();
         return Ok(());
@@ -245,7 +354,7 @@ async fn process_utterance(
         &risk.matches,
     );
     let must_confirm = config.confirmation || risk.requires_confirmation || !config.auto_send;
-    if must_confirm {
+    if must_confirm && interactive_terminal {
         disable_raw_mode()?;
         let approved = confirm(&ui.show_confirm_prompt())?;
         enable_raw_mode()?;
@@ -253,15 +362,23 @@ async fn process_utterance(
             ui.show_cancelled();
             return Ok(());
         }
+    } else if must_confirm {
+        ui.show_cancelled();
+        return Ok(());
     }
     if ui.mode() == AgentDisplayMode::Companion {
         let profile = config.agents.profile(config.agent);
-        if profile.resolved_copy_to_clipboard(config.agent) {
-            match clipboard::copy_text(&prompt) {
-                Ok(()) => ui.show_clipboard_copied(),
-                Err(error) => ui.show_clipboard_failed(&error.to_string()),
-            }
+        let delivery_mode = profile.resolved_delivery(config.agent);
+        match delivery::deliver_prompt(&prompt, delivery_mode) {
+            Ok(outcome) => ui.show_delivery(&outcome),
+            Err(error) => ui.show_delivery_failed(&error.to_string()),
         }
+        let _ = telemetry::record_utterance(
+            config,
+            transcript.duration_ms,
+            audio_seconds,
+            Some(delivery_mode.as_str()),
+        );
         return Ok(());
     }
     let theme = match ui.mode() {
@@ -287,7 +404,7 @@ async fn process_utterance(
     Ok(())
 }
 
-fn transcription_options(config: &AppConfig) -> TranscriptionOptions {
+pub(crate) fn transcription_options(config: &AppConfig) -> TranscriptionOptions {
     TranscriptionOptions {
         language: Some(config.language.clone()),
         initial_prompt: whisper_initial_prompt(&config.pipeline),
@@ -351,6 +468,7 @@ pub(crate) async fn record(config: AppConfig, action: RecordAction) -> Result<()
                 agent.as_ref(),
                 &session,
                 CancellationToken::new(),
+                false,
             )
             .await?;
             agent.shutdown().await?;
@@ -359,7 +477,7 @@ pub(crate) async fn record(config: AppConfig, action: RecordAction) -> Result<()
     Ok(())
 }
 
-async fn ensure_speech_engine(config: &AppConfig) -> Result<Arc<dyn SpeechEngine>> {
+pub(crate) async fn ensure_speech_engine(config: &AppConfig) -> Result<Arc<dyn SpeechEngine>> {
     let engine = speech_engine(config);
     if let Err(error) = engine.healthcheck().await {
         if config.speech_engine != SpeechEngineKind::WhisperCpp {

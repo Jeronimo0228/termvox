@@ -6,6 +6,8 @@ use std::{
 use anyhow::{Result, bail};
 use termvox_core::{AgentKind, AppConfig, SpeechEngineKind};
 
+use crate::presets;
+
 pub(crate) fn load_config(explicit: Option<&Path>) -> Result<AppConfig> {
     let global = global_config_path();
     let project = explicit.map_or_else(|| PathBuf::from("termvox.toml"), Path::to_path_buf);
@@ -14,7 +16,12 @@ pub(crate) fn load_config(explicit: Option<&Path>) -> Result<AppConfig> {
     Ok(config)
 }
 
-pub(crate) fn init_config(global: bool, force: bool, interactive: bool) -> Result<()> {
+pub(crate) fn init_config(
+    global: bool,
+    force: bool,
+    interactive: bool,
+    preset: Option<&str>,
+) -> Result<()> {
     let path = if global {
         global_config_path()
     } else {
@@ -33,6 +40,9 @@ pub(crate) fn init_config(global: bool, force: bool, interactive: bool) -> Resul
         std::fs::create_dir_all(parent)?;
     }
     let mut config = AppConfig::default();
+    if let Some(preset) = preset {
+        presets::apply_preset(&mut config, presets::parse_preset(preset)?);
+    }
     if interactive && io::stdin().is_terminal() {
         config.language = prompt_default("Language", &config.language)?;
         config.push_to_talk = prompt_default("Push-to-talk key", &config.push_to_talk)?;

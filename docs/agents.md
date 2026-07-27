@@ -44,7 +44,8 @@ extra_args = []
 | `extra_args` | All agents | Documented upstream flags inserted before the prompt |
 | `trust_workspace` | Cursor only | Pass `-f` for non-interactive workspace trust |
 | `display` | Any agent | `branded` (default), `companion`, or `verbose` |
-| `copy_to_clipboard` | Any agent | Auto-copy the prompt in companion mode (default: on for companion) |
+| `copy_to_clipboard` | Any agent | Legacy alias; use `delivery` instead |
+| `delivery` | Companion mode | `clipboard`, `paste`, or `both` (Cursor default: `both`) |
 
 ### Display modes
 

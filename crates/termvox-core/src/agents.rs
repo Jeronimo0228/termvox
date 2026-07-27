@@ -4,6 +4,29 @@ use serde::{Deserialize, Serialize};
 
 use crate::AgentKind;
 
+/// How companion-mode prompts reach the active agent TUI.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum PromptDelivery {
+    #[default]
+    Clipboard,
+    /// Simulate Ctrl+V in the focused window.
+    Paste,
+    /// Copy then auto-paste (recommended for Cursor).
+    Both,
+}
+
+impl PromptDelivery {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Clipboard => "clipboard",
+            Self::Paste => "paste",
+            Self::Both => "both",
+        }
+    }
+}
+
 /// How TermVox presents status and output for a coding-agent CLI.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "kebab-case")]
@@ -54,6 +77,8 @@ pub struct AgentProfile {
     pub display: Option<AgentDisplayMode>,
     /// Copy the processed prompt to the clipboard in companion mode.
     pub copy_to_clipboard: Option<bool>,
+    /// Companion delivery: clipboard, paste, or both.
+    pub delivery: Option<PromptDelivery>,
 }
 
 /// Invocation options derived from the active agent profile.
@@ -144,8 +169,26 @@ impl AgentProfile {
 
     #[must_use]
     pub fn resolved_copy_to_clipboard(&self, kind: AgentKind) -> bool {
-        self.copy_to_clipboard
-            .unwrap_or_else(|| self.resolved_display(kind) == AgentDisplayMode::Companion)
+        self.copy_to_clipboard.unwrap_or_else(|| {
+            matches!(
+                self.resolved_delivery(kind),
+                PromptDelivery::Clipboard | PromptDelivery::Both
+            )
+        })
+    }
+
+    #[must_use]
+    pub fn resolved_delivery(&self, kind: AgentKind) -> PromptDelivery {
+        if let Some(delivery) = self.delivery {
+            return delivery;
+        }
+        if self.resolved_display(kind) == AgentDisplayMode::Companion && kind == AgentKind::Cursor {
+            PromptDelivery::Both
+        } else if self.resolved_display(kind) == AgentDisplayMode::Companion {
+            PromptDelivery::Clipboard
+        } else {
+            PromptDelivery::Clipboard
+        }
     }
 }
 
@@ -170,7 +213,7 @@ pub const fn agent_ui(kind: AgentKind) -> AgentUiTheme {
             dim: DIM,
             reset: RESET,
             idle_placeholder: "Plan, search, build anything",
-            tip: "Voice via TermVox — prompt copied to clipboard; paste into Cursor with Ctrl+V.",
+            tip: "Voice via TermVox — prompt copied and pasted into Cursor automatically.",
         },
         AgentKind::Claude => AgentUiTheme {
             brand: "Claude Code",
@@ -294,8 +337,10 @@ mod tests {
     }
 
     #[test]
-    fn companion_defaults_copy_to_clipboard() {
-        assert!(AgentProfile::default().resolved_copy_to_clipboard(AgentKind::Cursor));
-        assert!(!AgentProfile::default().resolved_copy_to_clipboard(AgentKind::Codex));
+    fn cursor_companion_defaults_to_both_delivery() {
+        assert_eq!(
+            AgentProfile::default().resolved_delivery(AgentKind::Cursor),
+            PromptDelivery::Both
+        );
     }
 }
