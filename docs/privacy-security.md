@@ -7,8 +7,9 @@ coding agents, speech engines, models, or plugins.
 
 1. CPAL captures microphone samples in memory.
 2. TermVox converts to mono, resamples, and trims low-energy edges.
-3. Whisper.cpp, Parakeet, and Vosk modes write a temporary WAV for a local
-   subprocess. OpenAI mode uploads a WAV to the configured HTTPS endpoint.
+3. Embedded Whisper runs in-process on the CPU. Parakeet and Vosk modes write a
+   temporary WAV for a local subprocess. OpenAI mode uploads a WAV to the
+   configured HTTPS endpoint.
 4. The transcript is transformed by explicit pipeline rules and printed.
 5. After policy confirmation, the prompt is passed as a direct argument to the
    selected agent CLI in the current working directory.
@@ -23,11 +24,12 @@ or retain data under their own policies.
 
 ## Local and remote transcription
 
-Whisper.cpp and configured sidecars keep transcription local to their
-executables, but those executables and models are outside TermVox's trust
-boundary. Install them from trusted sources. Temporary WAV and output files are
-removed after normal completion, handled failure, or handled cancellation;
-deletion is best-effort and not secure erasure.
+Embedded Whisper keeps transcription on the device. Parakeet and Vosk sidecars
+keep transcription local to their executables, but those executables and models
+are outside TermVox's trust boundary. Install them from trusted sources.
+Temporary WAV files used by sidecars are removed after normal completion,
+handled failure, or handled cancellation; deletion is best-effort and not
+secure erasure.
 
 The OpenAI adapter sends the full captured utterance and bearer credential to
 `openai.endpoint`. A custom endpoint receives both. Verify the URL and review
@@ -57,7 +59,7 @@ false positives and false negatives are expected.
 - Treat configuration changes, especially endpoints and plugin executable
   paths, as code changes.
 - Review transcript and prompt text before sending.
-- Keep TermVox, agents, Whisper.cpp, and the operating system patched.
+- Keep TermVox, agents, and the operating system patched.
 
 ## Plugins and external triggers
 

@@ -1,3 +1,5 @@
+#[cfg(feature = "embedded-whisper")]
+use std::io::IsTerminal;
 use std::{
     io::{self, Write},
     path::PathBuf,
@@ -18,7 +20,9 @@ use termvox_core::{
 };
 use termvox_hotkeys::{HotkeyRegistration, TriggerState};
 use termvox_plugin_sdk::PluginAgentAdapter;
-use termvox_speech::{OpenAiSpeechEngine, SidecarSpeechEngine, WhisperCppEngine};
+#[cfg(feature = "embedded-whisper")]
+use termvox_speech::{DownloadProgress, ModelManager, ModelManifest};
+use termvox_speech::{EmbeddedWhisperEngine, OpenAiSpeechEngine, SidecarSpeechEngine};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
@@ -27,6 +31,7 @@ use crate::{
 };
 
 pub(crate) async fn test_audio(config: AppConfig, seconds: u64) -> Result<()> {
+    let speech = ensure_speech_engine(&config).await?;
     println!("Recording for {seconds} second(s)...");
     let recorder = AudioRecorder::start(&config.audio)?;
     tokio::time::sleep(Duration::from_secs(seconds)).await;
@@ -39,7 +44,7 @@ pub(crate) async fn test_audio(config: AppConfig, seconds: u64) -> Result<()> {
         "Captured {:.2}s of voiced audio; transcribing...",
         audio.duration_seconds()
     );
-    let transcript = speech_engine(&config)
+    let transcript = speech
         .transcribe(
             audio,
             &TranscriptionOptions {
@@ -67,6 +72,7 @@ pub(crate) async fn start(
             info.id
         );
     }
+    let speech = ensure_speech_engine(&config).await?;
     let session = agent.start().await?;
     let shutdown = CancellationToken::new();
     let signal_cancel = shutdown.clone();
@@ -94,6 +100,7 @@ pub(crate) async fn start(
                         process_utterance(
                             &config,
                             audio,
+                            speech.as_ref(),
                             agent.as_ref(),
                             &session,
                             shutdown.child_token(),
@@ -105,6 +112,7 @@ pub(crate) async fn start(
                         process_utterance(
                             &config,
                             audio,
+                            speech.as_ref(),
                             agent.as_ref(),
                             &session,
                             shutdown.child_token(),
@@ -153,6 +161,7 @@ pub(crate) async fn start(
             if let Err(error) = process_utterance(
                 &config,
                 audio,
+                speech.as_ref(),
                 agent.as_ref(),
                 &session,
                 shutdown.child_token(),
@@ -174,6 +183,7 @@ pub(crate) async fn start(
 async fn process_utterance(
     config: &AppConfig,
     audio: termvox_core::AudioBuffer,
+    speech: &dyn SpeechEngine,
     agent: &dyn AgentAdapter,
     session: &AgentSession,
     cancel: CancellationToken,
@@ -187,7 +197,7 @@ async fn process_utterance(
         println!("No speech detected.");
         return Ok(());
     }
-    let transcript = speech_engine(config)
+    let transcript = speech
         .transcribe(
             audio,
             &TranscriptionOptions {
@@ -243,6 +253,7 @@ pub(crate) async fn record(config: AppConfig, action: RecordAction) -> Result<()
             println!("Stop requested");
         }
         RecordAction::Start | RecordAction::Toggle => {
+            let speech = ensure_speech_engine(&config).await?;
             if let Some(parent) = marker.parent() {
                 std::fs::create_dir_all(parent)?;
             }
@@ -258,6 +269,7 @@ pub(crate) async fn record(config: AppConfig, action: RecordAction) -> Result<()
             process_utterance(
                 &config,
                 audio,
+                speech.as_ref(),
                 agent.as_ref(),
                 &session,
                 CancellationToken::new(),
@@ -269,9 +281,74 @@ pub(crate) async fn record(config: AppConfig, action: RecordAction) -> Result<()
     Ok(())
 }
 
+async fn ensure_speech_engine(config: &AppConfig) -> Result<Arc<dyn SpeechEngine>> {
+    let engine = speech_engine(config);
+    if let Err(error) = engine.healthcheck().await {
+        if config.speech_engine != SpeechEngineKind::WhisperCpp {
+            return Err(error.into());
+        }
+        #[cfg(not(feature = "embedded-whisper"))]
+        return Err(error.into());
+        #[cfg(feature = "embedded-whisper")]
+        {
+            if config.whisper.model.is_file() {
+                return Err(error.into());
+            }
+            if !io::stdin().is_terminal() {
+                bail!(
+                    "{error}; install the free local model with `termvox models install default`"
+                );
+            }
+            let manifest = ModelManifest::bundled()?;
+            let artifact = manifest
+                .find("whisper-base", std::env::consts::OS)
+                .ok_or_else(|| anyhow::anyhow!("reviewed default Whisper model is unavailable"))?;
+            if !confirm(&format!(
+                "Download the free local Whisper model ({} MiB) now? [y/N] ",
+                artifact.size_bytes / (1024 * 1024)
+            ))? {
+                bail!("model download declined; run `termvox models install default` later");
+            }
+            let mut last_percent = 0_u64;
+            ModelManager::default()
+                .download_verified_with(
+                    &artifact.url,
+                    &config.whisper.model,
+                    &artifact.sha256,
+                    CancellationToken::new(),
+                    move |progress| print_model_progress(progress, &mut last_percent),
+                )
+                .await?;
+            println!(
+                "Verified local model installed at {}",
+                config.whisper.model.display()
+            );
+            engine.healthcheck().await?;
+        }
+    }
+    Ok(engine)
+}
+
+#[cfg(feature = "embedded-whisper")]
+fn print_model_progress(progress: DownloadProgress, last_percent: &mut u64) {
+    let Some(total) = progress.total_bytes.filter(|total| *total > 0) else {
+        return;
+    };
+    let percent = progress.downloaded_bytes.saturating_mul(100) / total;
+    if percent == 100 || percent >= last_percent.saturating_add(5) {
+        println!(
+            "{percent:>3}% ({}/{total} bytes)",
+            progress.downloaded_bytes
+        );
+        *last_percent = percent;
+    }
+}
+
 pub(crate) fn speech_engine(config: &AppConfig) -> Arc<dyn SpeechEngine> {
     match config.speech_engine {
-        SpeechEngineKind::WhisperCpp => Arc::new(WhisperCppEngine::new(config.whisper.clone())),
+        SpeechEngineKind::WhisperCpp => {
+            Arc::new(EmbeddedWhisperEngine::new(config.whisper.clone()))
+        }
         SpeechEngineKind::OpenAi => Arc::new(OpenAiSpeechEngine::new(config.openai.clone())),
         SpeechEngineKind::Parakeet => {
             Arc::new(SidecarSpeechEngine::parakeet(config.parakeet.clone()))

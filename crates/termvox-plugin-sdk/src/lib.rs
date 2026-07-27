@@ -254,13 +254,14 @@ impl PluginClient {
             if line.len() > self.max_frame_bytes {
                 return Err(PluginError::FrameTooLarge);
             }
-            if let Ok(notification) = serde_json::from_str::<RpcNotification>(&line) {
-                if notification.jsonrpc == "2.0" && notification.method == "event" {
-                    let event = serde_json::from_value(notification.params)
-                        .map_err(|error| PluginError::Protocol(error.to_string()))?;
-                    self.events.push_back(event);
-                    continue;
-                }
+            if let Ok(notification) = serde_json::from_str::<RpcNotification>(&line)
+                && notification.jsonrpc == "2.0"
+                && notification.method == "event"
+            {
+                let event = serde_json::from_value(notification.params)
+                    .map_err(|error| PluginError::Protocol(error.to_string()))?;
+                self.events.push_back(event);
+                continue;
             }
             let response: RpcResponse = serde_json::from_str(&line)
                 .map_err(|error| PluginError::Protocol(error.to_string()))?;

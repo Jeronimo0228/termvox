@@ -5,7 +5,7 @@ packages or prebuilt binaries.
 
 ## 1. Install prerequisites
 
-Install Rust 1.86 or later, microphone development libraries, and one supported
+Install Rust 1.88 or later, microphone development libraries, and one supported
 agent:
 
 - `codex` for Codex CLI
@@ -15,9 +15,8 @@ agent:
 - `aider` for Aider
 - `amp` for Amp
 
-For local speech-to-text, also install Whisper.cpp's `whisper-cli` and obtain a
-compatible GGML model. See [Installation](installation.md) for each operating
-system.
+Local speech-to-text is embedded. It does not require `whisper-cli`, an API key,
+or a paid speech service.
 
 ## 2. Build and initialize
 
@@ -27,6 +26,7 @@ cd termvox
 cargo install --path crates/termvox-cli
 
 termvox init
+termvox models install default
 termvox config validate
 termvox doctor
 ```
@@ -37,15 +37,20 @@ existing file unless `--force` is passed.
 
 ## 3. Select transcription
 
-For Whisper.cpp:
+The free local default is:
 
 ```toml
-speech_engine = "whispercpp"
+speech_engine = "whisper"
 
 [whisper]
-executable = "whisper-cli"
-model = "/absolute/path/to/ggml-base.bin"
+model = "/absolute/path/to/ggml-base.bin" # optional override
+threads = 0 # use available CPU parallelism
 ```
+
+`termvox models install default` downloads the reviewed multilingual base model
+(about 142 MiB), verifies its SHA-256, and stores it in the TermVox data
+directory. Interactive recording commands ask before downloading it when
+missing; non-interactive commands print the explicit install command instead.
 
 For OpenAI:
 

@@ -11,6 +11,7 @@ use crate::{Result, TermVoxError};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum SpeechEngineKind {
+    #[serde(rename = "whisper", alias = "whispercpp")]
     WhisperCpp,
     OpenAi,
     Parakeet,
@@ -135,15 +136,16 @@ impl Default for AudioConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct WhisperConfig {
-    pub executable: String,
     pub model: PathBuf,
+    /// Decoder worker count. Zero selects the available CPU parallelism.
+    pub threads: usize,
 }
 
 impl Default for WhisperConfig {
     fn default() -> Self {
         Self {
-            executable: "whisper-cli".into(),
             model: data_path("termvox/models/ggml-base.bin"),
+            threads: 0,
         }
     }
 }
@@ -364,5 +366,14 @@ mod tests {
         let mut config = AppConfig::default();
         config.runtime.max_json_frame_bytes = 0;
         assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn accepts_legacy_whispercpp_name_but_serializes_whisper() {
+        let config: AppConfig = toml::from_str("speech_engine = \"whispercpp\"").unwrap();
+        assert_eq!(config.speech_engine, SpeechEngineKind::WhisperCpp);
+        let serialized = toml::to_string(&config).unwrap();
+        assert!(serialized.contains("speech_engine = \"whisper\""));
+        assert!(!serialized.contains("whispercpp"));
     }
 }

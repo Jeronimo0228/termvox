@@ -1,6 +1,6 @@
 use anyhow::Result;
 use termvox_audio::input_devices;
-use termvox_core::{AgentAdapter, AppConfig};
+use termvox_core::{AgentAdapter, AppConfig, SpeechEngineKind};
 use termvox_hotkeys::detect_support;
 
 use crate::runtime::{all_agents, speech_engine};
@@ -29,7 +29,13 @@ pub(crate) async fn run(config: AppConfig, json: bool) -> Result<()> {
     let engine = speech_engine(&config);
     check(
         &format!("speech/{}", engine.id()),
-        engine.healthcheck().await.map(|()| "ready".into()),
+        engine.healthcheck().await.map(|()| {
+            if config.speech_engine == SpeechEngineKind::WhisperCpp {
+                format!("ready ({})", config.whisper.model.display())
+            } else {
+                "ready".into()
+            }
+        }),
     );
     for agent in all_agents() {
         let info = agent.probe().await;
@@ -66,10 +72,23 @@ async fn json_report(config: &AppConfig) -> Result<()> {
         |devices| serde_json::json!({"ok": !devices.is_empty(), "devices": devices}),
     );
     let engine = speech_engine(config);
+    let model = (config.speech_engine == SpeechEngineKind::WhisperCpp)
+        .then(|| config.whisper.model.display().to_string());
     let speech = match engine.healthcheck().await {
-        Ok(()) => serde_json::json!({"ok": true, "provider": engine.id()}),
+        Ok(()) => serde_json::json!({
+            "ok": true,
+            "provider": engine.id(),
+            "model": model,
+            "local": config.speech_engine == SpeechEngineKind::WhisperCpp,
+        }),
         Err(error) => {
-            serde_json::json!({"ok": false, "provider": engine.id(), "error": error.to_string()})
+            serde_json::json!({
+                "ok": false,
+                "provider": engine.id(),
+                "model": model,
+                "local": config.speech_engine == SpeechEngineKind::WhisperCpp,
+                "error": error.to_string()
+            })
         }
     };
     let mut agents = Vec::new();

@@ -19,7 +19,8 @@ name = "termvox"
 path = "src/main.rs"
 
 [features]
-default = ["native-audio"]
+default = ["native-audio", "embedded-whisper"]
+embedded-whisper = ["termvox-speech/embedded-whisper"]
 native-audio = ["termvox-audio/native-audio"]
 
 [dependencies]
@@ -39,7 +40,7 @@ termvox-agents = { version = "0.1.0-alpha.1", path = "../termvox-agents" }
 termvox-audio = { version = "0.1.0-alpha.1", path = "../termvox-audio", default-features = false }
 termvox-core = { version = "0.1.0-alpha.1", path = "../termvox-core" }
 termvox-plugin-sdk = { version = "0.1.0-alpha.1", path = "../termvox-plugin-sdk" }
-termvox-speech = { version = "0.1.0-alpha.1", path = "../termvox-speech" }
+termvox-speech = { version = "0.1.0-alpha.1", path = "../termvox-speech", default-features = false }
 termvox-hotkeys = { version = "0.1.0-alpha.1", path = "../termvox-hotkeys" }
 
 [lints]

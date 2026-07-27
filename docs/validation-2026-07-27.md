@@ -25,8 +25,10 @@ Environment: Fedora Linux x86_64, Rust stable, TermVox `0.1.0-alpha.1`.
 - Claude Code `1.0.33` and Cursor Agent `2026.07.23-e383d2b` were detected.
   Safe no-tool prompt probes produced no output and timed out after 90 seconds,
   so runtime compatibility is not claimed.
-- Microphone capture passed, but transcription could not continue because
-  `whisper-cli` is not installed.
+- Embedded Whisper inference on Linux with the verified `whisper-base` model
+  installed via `termvox models install default`.
+- `termvox test --seconds 3` transcribed captured audio locally without
+  `whisper-cli` or an API key.
 
 ## Unavailable in this environment
 

@@ -38,11 +38,18 @@ Lower `audio.vad_threshold_db` (make it more negative), move closer to the
 microphone, or verify the selected input. `vad_silence_ms` retains audio around
 detected speech but does not make quiet audio count as voiced.
 
-## Whisper executable or model not found
+## Whisper model not found
 
-Run `whisper-cli --help` in the same shell. Use an absolute model path; quoted
-TOML values beginning with `~` are not reliably shell-expanded. Confirm the
-model format matches your Whisper.cpp build.
+Install the reviewed default model:
+
+```bash
+termvox models install default
+termvox models status default
+```
+
+Use an absolute model path in `termvox.toml`; quoted TOML values beginning
+with `~` are not reliably shell-expanded. In non-interactive use, TermVox does
+not download the model without explicit consent; run the install command first.
 
 ## OpenAI authentication or HTTP errors
 

@@ -70,6 +70,24 @@ window-manager binding:
 The start process must remain running. The marker is coordination, not
 authentication; another process running as the same OS user can manipulate it.
 
+### `termvox models list`
+
+Lists release-reviewed model artifacts from the bundled manifest, including the
+default embedded Whisper base model and optional sidecar models.
+
+### `termvox models install [ID]`
+
+Downloads and verifies a reviewed model. `default` installs the multilingual
+`whisper-base` artifact (about 142 MiB) into the configured Whisper model path.
+
+### `termvox models status [ID]`
+
+Reports whether the selected artifact is installed and checksum-verified.
+
+### `termvox models remove [ID]`
+
+Removes the installed artifact from its configured destination.
+
 ### `termvox models download URL --sha256 HASH [--destination PATH]`
 
 Downloads bytes, verifies the required 64-character SHA-256, and moves the

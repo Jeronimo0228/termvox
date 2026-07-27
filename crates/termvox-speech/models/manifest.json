@@ -2,6 +2,26 @@
   "schema_version": 1,
   "artifacts": [
     {
+      "id": "whisper-base",
+      "provider": "whisper.cpp",
+      "version": "5359861c739e955e79d9a303bcbc70fb988958b1",
+      "license": "MIT",
+      "platform": "all",
+      "size_bytes": 147951465,
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base.bin",
+      "sha256": "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe"
+    },
+    {
+      "id": "whisper-tiny",
+      "provider": "whisper.cpp",
+      "version": "5359861c739e955e79d9a303bcbc70fb988958b1",
+      "license": "MIT",
+      "platform": "all",
+      "size_bytes": 77691713,
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-tiny.bin",
+      "sha256": "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21"
+    },
+    {
       "id": "vosk-model-small-es-0.42",
       "provider": "vosk",
       "version": "0.42",

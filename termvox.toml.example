@@ -1,4 +1,4 @@
-speech_engine = "whispercpp"
+speech_engine = "whisper"
 agent = "codex"
 # Set this to an enabled [[plugins]].id to use a plugin instead of `agent`.
 # agent_plugin = "example"
@@ -22,8 +22,8 @@ max_output_bytes = 8388608
 max_json_frame_bytes = 1048576
 
 [whisper]
-executable = "whisper-cli"
 model = "/home/you/.local/share/termvox/models/ggml-base.bin"
+threads = 0
 
 [openai]
 api_key_env = "OPENAI_API_KEY"

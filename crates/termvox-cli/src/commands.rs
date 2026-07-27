@@ -1,11 +1,16 @@
-use std::{io, path::Path, time::Duration};
+use std::{
+    io,
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use clap::CommandFactory;
 use clap_complete::Shell;
 use termvox_core::{AgentAdapter, AppConfig};
 use termvox_plugin_sdk::{PluginClient, PluginSpawnOptions};
-use termvox_speech::{ModelManager, ModelManifest};
+use termvox_speech::{DownloadProgress, ModelArtifact, ModelManager, ModelManifest};
+use tokio_util::sync::CancellationToken;
 
 use crate::{
     cli::{Cli, ConfigCommand, ModelCommand, PluginCommand},
@@ -99,6 +104,66 @@ pub(crate) async fn model(config: AppConfig, command: ModelCommand) -> Result<()
                 );
             }
         }
+        ModelCommand::Install { id } => {
+            let manifest = ModelManifest::bundled()?;
+            let artifact = resolve_model(&manifest, &id)?;
+            let destination = model_destination(&config, artifact)?;
+            if ModelManager::verify_file(&destination, &artifact.sha256).await? {
+                println!(
+                    "{} is already installed and verified at {}",
+                    artifact.id,
+                    destination.display()
+                );
+                return Ok(());
+            }
+            if destination.exists() {
+                tokio::fs::remove_file(&destination).await?;
+            }
+            println!(
+                "Downloading {} ({} bytes) to {}",
+                artifact.id,
+                artifact.size_bytes,
+                destination.display()
+            );
+            let mut last_percent = 0_u64;
+            ModelManager::default()
+                .download_verified_with(
+                    &artifact.url,
+                    &destination,
+                    &artifact.sha256,
+                    CancellationToken::new(),
+                    move |progress| print_download_progress(progress, &mut last_percent),
+                )
+                .await?;
+            println!("Verified model saved to {}", destination.display());
+        }
+        ModelCommand::Status { id } => {
+            let manifest = ModelManifest::bundled()?;
+            let artifact = resolve_model(&manifest, &id)?;
+            let destination = model_destination(&config, artifact)?;
+            if !destination.is_file() {
+                println!("{}: not installed ({})", artifact.id, destination.display());
+            } else if ModelManager::verify_file(&destination, &artifact.sha256).await? {
+                println!("{}: installed and verified", artifact.id);
+            } else {
+                println!(
+                    "{}: installed but checksum verification failed",
+                    artifact.id
+                );
+            }
+        }
+        ModelCommand::Remove { id } => {
+            let manifest = ModelManifest::bundled()?;
+            let artifact = resolve_model(&manifest, &id)?;
+            let destination = model_destination(&config, artifact)?;
+            match tokio::fs::remove_file(&destination).await {
+                Ok(()) => println!("Removed {} from {}", artifact.id, destination.display()),
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                    println!("{} is not installed", artifact.id);
+                }
+                Err(error) => return Err(error.into()),
+            }
+        }
         ModelCommand::Download {
             url,
             sha256,
@@ -112,6 +177,54 @@ pub(crate) async fn model(config: AppConfig, command: ModelCommand) -> Result<()
         }
     }
     Ok(())
+}
+
+fn resolve_model<'a>(manifest: &'a ModelManifest, requested: &str) -> Result<&'a ModelArtifact> {
+    let id = if requested == "default" {
+        "whisper-base"
+    } else {
+        requested
+    };
+    manifest
+        .find(id, std::env::consts::OS)
+        .ok_or_else(|| anyhow!("reviewed model not found for this platform: {id}"))
+}
+
+fn model_destination(config: &AppConfig, artifact: &ModelArtifact) -> Result<PathBuf> {
+    if artifact.id == "whisper-base" {
+        return Ok(config.whisper.model.clone());
+    }
+    let filename = artifact
+        .url
+        .rsplit('/')
+        .next()
+        .filter(|filename| !filename.is_empty())
+        .ok_or_else(|| anyhow!("model URL has no filename: {}", artifact.url))?;
+    let configured = match artifact.provider.as_str() {
+        "whisper.cpp" => &config.whisper.model,
+        "vosk" => &config.vosk.model,
+        "parakeet" => &config.parakeet.model,
+        provider => return Err(anyhow!("unsupported model provider: {provider}")),
+    };
+    Ok(configured
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .join(filename))
+}
+
+fn print_download_progress(progress: DownloadProgress, last_percent: &mut u64) {
+    let Some(total) = progress.total_bytes.filter(|total| *total > 0) else {
+        return;
+    };
+    let percent = progress.downloaded_bytes.saturating_mul(100) / total;
+    if percent == 100 || percent >= last_percent.saturating_add(5) {
+        println!(
+            "{percent:>3}% ({}/{total} bytes){}",
+            progress.downloaded_bytes,
+            if progress.resumed { " resumed" } else { "" }
+        );
+        *last_percent = percent;
+    }
 }
 
 pub(crate) fn update() {

@@ -5,16 +5,16 @@ utterance, transcribes it, shows the resulting prompt, and sends it to a
 selected agent only after the configured confirmation policy allows it.
 
 > **Project status:** TermVox is pre-release software. The source currently
-> includes adapters for Codex, Claude, Cursor, Gemini, Aider, and Amp; direct
-> Whisper.cpp and OpenAI transcription; and sidecar contracts for Parakeet and
-> Vosk. Availability still depends on separately installed upstream tools and
-> compatible versions. No release artifacts or signatures are claimed to be
-> available.
+> includes adapters for Codex, Claude, Cursor, Gemini, Aider, and Amp; embedded
+> local Whisper and optional OpenAI transcription; and sidecar contracts for
+> Parakeet and Vosk. The default speech path is free, local, and needs no API
+> key. Coding-agent availability still depends on separately installed upstream
+> tools. No release artifacts or signatures are claimed to be available.
 
 ## Quick start
 
 The only verified installation path in this repository is a source build.
-Install [Rust 1.86 or later](https://www.rust-lang.org/tools/install), the
+Install [Rust 1.88 or later](https://www.rust-lang.org/tools/install), the
 platform audio prerequisites, and one supported coding-agent CLI.
 
 ```bash
@@ -26,13 +26,15 @@ cd termvox
 cargo install --path crates/termvox-cli
 
 termvox init
+termvox models install default
 termvox doctor
 termvox start
 ```
 
-For local transcription, install `whisper-cli`, obtain a compatible GGML model
-from a source you trust, and set `[whisper].model` in `termvox.toml`. For remote
-transcription, set `speech_engine = "openai"` and export `OPENAI_API_KEY`.
+No speech API key or separate Whisper executable is required. TermVox verifies
+and stores the multilingual base model outside the repository; interactive
+commands offer this download when it is missing. For remote transcription,
+explicitly set `speech_engine = "openai"` and export `OPENAI_API_KEY`.
 
 While `termvox start` is focused, hold `Space` to record, release it to
 transcribe, review the prompt, and answer the confirmation question. Press `q`
@@ -43,7 +45,7 @@ or `Ctrl+C` to exit.
 | Integration | Status in the current source |
 | --- | --- |
 | Codex, Claude, Cursor, Gemini, Aider, Amp | Built-in CLI adapters |
-| Whisper.cpp, OpenAI speech-to-text | Built-in speech adapters |
+| Embedded Whisper, OpenAI speech-to-text | Built-in speech adapters; Whisper is the free local default |
 | Parakeet, Vosk | Generic local sidecar adapters |
 | Third-party JSON-RPC plugins | Explicit configuration plus inspect/test lifecycle |
 

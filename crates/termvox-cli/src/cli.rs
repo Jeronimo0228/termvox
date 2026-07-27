@@ -91,6 +91,18 @@ pub(crate) enum ConfigCommand {
 #[derive(Debug, Subcommand)]
 pub(crate) enum ModelCommand {
     List,
+    Install {
+        #[arg(default_value = "default")]
+        id: String,
+    },
+    Status {
+        #[arg(default_value = "default")]
+        id: String,
+    },
+    Remove {
+        #[arg(default_value = "default")]
+        id: String,
+    },
     Download {
         url: String,
         #[arg(long)]
