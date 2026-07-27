@@ -9,7 +9,11 @@ pub(crate) struct DeliveryOutcome {
     pub paste: bool,
 }
 
-pub(crate) fn deliver_prompt(text: &str, mode: PromptDelivery) -> Result<DeliveryOutcome> {
+pub(crate) fn deliver_prompt(
+    text: &str,
+    mode: PromptDelivery,
+    window_title: Option<&str>,
+) -> Result<DeliveryOutcome> {
     let mut outcome = DeliveryOutcome {
         clipboard: false,
         paste: false,
@@ -25,7 +29,7 @@ pub(crate) fn deliver_prompt(text: &str, mode: PromptDelivery) -> Result<Deliver
         if outcome.clipboard {
             paste::paste_after_clipboard_delay();
         }
-        paste::paste_focused()?;
+        paste::paste_to_target(window_title)?;
         outcome.paste = true;
     }
     Ok(outcome)

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
@@ -37,10 +39,22 @@ pub struct TranscriptSegment {
     pub text: String,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Default)]
 pub struct TranscriptionOptions {
     pub language: Option<String>,
     pub initial_prompt: Option<String>,
+    /// Invoked from the Whisper worker thread as partial text grows.
+    pub on_partial: Option<Arc<dyn Fn(String) + Send + Sync>>,
+}
+
+impl std::fmt::Debug for TranscriptionOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TranscriptionOptions")
+            .field("language", &self.language)
+            .field("initial_prompt", &self.initial_prompt)
+            .field("on_partial", &self.on_partial.is_some())
+            .finish()
+    }
 }
 
 #[async_trait]

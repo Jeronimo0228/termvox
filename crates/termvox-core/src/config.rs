@@ -194,6 +194,8 @@ pub struct WhisperConfig {
     pub optimize_for_latency: bool,
     /// Use GPU acceleration when the Whisper build supports it.
     pub use_gpu: bool,
+    /// Emit partial transcript segments while Whisper decodes.
+    pub streaming: bool,
 }
 
 impl Default for WhisperConfig {
@@ -205,6 +207,7 @@ impl Default for WhisperConfig {
             prewarm_on_start: false,
             optimize_for_latency: true,
             use_gpu: false,
+            streaming: true,
         }
     }
 }

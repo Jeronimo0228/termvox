@@ -21,6 +21,7 @@ pub(crate) fn apply_preset(config: &mut AppConfig, preset: InitPreset) {
             config.language = "es".into();
             config.agents.cursor.display = Some(AgentDisplayMode::Companion);
             config.agents.cursor.delivery = Some(PromptDelivery::Both);
+            config.agents.cursor.paste_window_title = Some("Cursor".into());
             config.agents.cursor.trust_workspace = false;
         }
         InitPreset::Codex => {

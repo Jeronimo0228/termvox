@@ -1,0 +1,147 @@
+name: Publish release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to publish (for example v0.1.0-alpha.1)
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: publish-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            binary: target/x86_64-unknown-linux-gnu/dist/termvox
+            extension: tar.gz
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            binary: target/x86_64-apple-darwin/dist/termvox
+            extension: tar.gz
+          - os: macos-15
+            target: aarch64-apple-darwin
+            binary: target/aarch64-apple-darwin/dist/termvox
+            extension: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary: target/x86_64-pc-windows-msvc/dist/termvox.exe
+            extension: zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Install Linux audio headers
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libasound2-dev
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0
+        with:
+          key: publish-${{ matrix.target }}
+      - name: Resolve version from tag
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+          version="${tag#v}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Build locked release binary
+        run: cargo build --profile dist --locked --target ${{ matrix.target }} --bin termvox
+      - name: Set reproducible build timestamp
+        shell: bash
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+      - name: Package reproducibly
+        id: package
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TARGET: ${{ matrix.target }}
+          BINARY: ${{ matrix.binary }}
+          EXTENSION: ${{ matrix.extension }}
+        run: |
+          asset="termvox-v${VERSION}-${TARGET}.${EXTENSION}"
+          scripts/package-release.sh "$BINARY" "dist/$asset"
+          echo "asset=$asset" >> "$GITHUB_OUTPUT"
+      - uses: anchore/sbom-action@v0
+        with:
+          path: ${{ matrix.binary }}
+          format: cyclonedx-json
+          output-file: dist/${{ steps.package.outputs.asset }}.cdx.json
+          upload-artifact: false
+      - uses: sigstore/cosign-installer@v3
+      - name: Keyless-sign archive
+        shell: bash
+        env:
+          ASSET: ${{ steps.package.outputs.asset }}
+        run: cosign sign-blob --yes --bundle "dist/${ASSET}.sigstore.json" "dist/${ASSET}"
+      - name: Create per-platform checksums
+        shell: bash
+        env:
+          ASSET: ${{ steps.package.outputs.asset }}
+        run: cd dist && sha256sum "$ASSET" > "$ASSET.sha256"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: publish GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - uses: sigstore/cosign-installer@v3
+      - run: scripts/verify-release.sh dist
+      - run: scripts/verify-release.sh --write-checksums dist
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.tag.outputs.tag }}" dist/* \
+            --repo "${{ github.repository }}" \
+            --title "TermVox ${{ steps.tag.outputs.tag }}" \
+            --notes-file docs/release-notes-template.md \
+            --verify-tag

@@ -1,11 +1,25 @@
 # Installation
 
-## Support level
+## Quick install (recommended)
 
-TermVox is pre-release software. Building from this repository is the only
-installation method verified by the project documentation. Do not assume that
-GitHub release assets, package-manager formulas, checksums, signatures, or
-SBOMs exist.
+Pre-built binaries are published on [GitHub Releases](https://github.com/Jeronimo0228/termvox/releases).
+No Rust toolchain is required:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
+```
+
+The installer downloads the archive for your platform, verifies SHA-256 when available,
+installs `termvox` to `~/.local/bin`, downloads the default Whisper model, and applies
+the Cursor preset. To force a source build instead:
+
+```bash
+TERMVOX_INSTALL_SOURCE=1 curl -fsSL .../scripts/install.sh | bash
+```
+
+Pin a release with `TERMVOX_VERSION=v0.1.0-alpha.1`.
+
+## Build from source
 
 All platforms need:
 
@@ -13,7 +27,7 @@ All platforms need:
 - Rust 1.88 or later, including Cargo
 - A working microphone and OS permission to use it
 - One [supported coding-agent CLI](agents.md)
-- About 142 MiB of disk space for the default local Whisper model
+- About 50 MiB of disk space for the default tiny Whisper model (`termvox models install default`)
 
 ## Linux
 
@@ -74,13 +88,16 @@ binary.
 
 ### Embedded Whisper (default)
 
-No separate inference executable is needed. Install the reviewed multilingual
-base model with:
+No separate inference executable is needed. Install the reviewed default model with:
 
 ```bash
 termvox models install default
 termvox models status default
 ```
+
+The default **fast** profile uses `whisper-tiny` (~50 MiB). If you previously installed
+`whisper-base`, run `termvox models install default` again or point `whisper.model` at your
+existing file.
 
 TermVox downloads from a commit-pinned upstream URL, verifies its SHA-256, then
 atomically moves the file into its data directory. Use

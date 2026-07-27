@@ -29,7 +29,7 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 
 #[cfg(feature = "embedded-whisper")]
-use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
+use whisper_rs::{FullParams, SamplingStrategy, SegmentCallbackData, WhisperContext, WhisperContextParameters};
 
 pub struct EmbeddedWhisperEngine {
     #[cfg_attr(not(feature = "embedded-whisper"), allow(dead_code))]
@@ -186,8 +186,13 @@ fn transcribe_embedded(
     params.set_translate(false);
     if config.optimize_for_latency {
         params.set_no_context(true);
-        params.set_single_segment(true);
         params.set_max_len(0);
+    }
+    let streaming = config.streaming && options.on_partial.is_some();
+    if streaming {
+        params.set_single_segment(false);
+    } else if config.optimize_for_latency {
+        params.set_single_segment(true);
     }
     params.set_language(
         options
@@ -207,6 +212,21 @@ fn transcribe_embedded(
     params.set_abort_callback_safe::<Option<Box<dyn FnMut() -> bool>>, Box<dyn FnMut() -> bool>>(
         Some(abort_callback),
     );
+
+    if streaming {
+        let on_partial = Arc::clone(options.on_partial.as_ref().unwrap());
+        let partial_text = Arc::new(Mutex::new(String::new()));
+        let partial_acc = Arc::clone(&partial_text);
+        let streaming_cancel = cancel.clone();
+        params.set_segment_callback_safe(move |segment: SegmentCallbackData| {
+            if streaming_cancel.is_cancelled() {
+                return;
+            }
+            let mut accumulated = partial_acc.lock().unwrap_or_else(|error| error.into_inner());
+            accumulated.push_str(&segment.text);
+            on_partial(accumulated.clone());
+        });
+    }
 
     let mut state = context.create_state().map_err(|error| {
         TermVoxError::Speech(format!("failed to create Whisper state: {error}"))

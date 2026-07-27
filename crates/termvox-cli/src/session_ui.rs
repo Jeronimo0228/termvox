@@ -11,6 +11,17 @@ pub(crate) struct SessionUi {
     toggle: bool,
 }
 
+impl Clone for SessionUi {
+    fn clone(&self) -> Self {
+        Self {
+            theme: self.theme,
+            mode: self.mode,
+            ptt_label: self.ptt_label.clone(),
+            toggle: self.toggle,
+        }
+    }
+}
+
 impl SessionUi {
     pub(crate) fn new(
         kind: AgentKind,
@@ -116,6 +127,24 @@ impl SessionUi {
         }
     }
 
+    pub(crate) fn show_partial_transcript(&self, partial: &str) {
+        let partial = partial.trim();
+        if partial.is_empty() {
+            return;
+        }
+        let preview = truncate_preview(partial, 72);
+        match self.mode {
+            AgentDisplayMode::Verbose => {
+                print!("\rPartial: {preview}\r");
+                let _ = io::stdout().flush();
+            }
+            AgentDisplayMode::Branded | AgentDisplayMode::Companion => self.write_status(&format!(
+                "{}{} {preview}…{}",
+                self.theme.accent, self.theme.prompt_glyph, self.theme.reset
+            )),
+        }
+    }
+
     pub(crate) fn show_transcript(
         &self,
         heard: &str,
@@ -178,13 +207,19 @@ impl SessionUi {
         }
     }
 
-    pub(crate) fn show_delivery(&self, outcome: &DeliveryOutcome) {
+    pub(crate) fn show_delivery(&self, outcome: &DeliveryOutcome, window_title: Option<&str>) {
         if self.mode == AgentDisplayMode::Companion {
             let detail = match (outcome.clipboard, outcome.paste) {
-                (true, true) => "Copied and pasted",
-                (true, false) => "Copied to clipboard",
-                (false, true) => "Pasted into focused window",
-                (false, false) => "Delivered",
+                (true, true) => match window_title {
+                    Some(title) => format!("Copied and pasted into {title}"),
+                    None => "Copied and pasted".into(),
+                },
+                (true, false) => "Copied to clipboard".into(),
+                (false, true) => match window_title {
+                    Some(title) => format!("Pasted into {title}"),
+                    None => "Pasted into focused window".into(),
+                },
+                (false, false) => "Delivered".into(),
             };
             self.write_status(&format!(
                 "{}{} {detail}{}",
@@ -277,4 +312,11 @@ impl SessionUi {
         print!("\r\x1b[K{line}");
         let _ = io::stdout().flush();
     }
+}
+
+fn truncate_preview(text: &str, max_chars: usize) -> String {
+    if text.chars().count() <= max_chars {
+        return text.to_owned();
+    }
+    text.chars().take(max_chars).collect()
 }
