@@ -5,7 +5,7 @@ packages or prebuilt binaries.
 
 ## 1. Install prerequisites
 
-Install Rust 1.85 or later, microphone development libraries, and one supported
+Install Rust 1.86 or later, microphone development libraries, and one supported
 agent:
 
 - `codex` for Codex CLI

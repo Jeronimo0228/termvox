@@ -17,7 +17,7 @@ tested OS versions or architectures.
 
 ## Rust
 
-The workspace declares Rust 1.85 and edition 2024. Older toolchains are
+The workspace declares Rust 1.86 and edition 2024. Older toolchains are
 unsupported.
 
 ## Coding agents

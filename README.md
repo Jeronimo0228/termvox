@@ -14,7 +14,7 @@ selected agent only after the configured confirmation policy allows it.
 ## Quick start
 
 The only verified installation path in this repository is a source build.
-Install [Rust 1.85 or later](https://www.rust-lang.org/tools/install), the
+Install [Rust 1.86 or later](https://www.rust-lang.org/tools/install), the
 platform audio prerequisites, and one supported coding-agent CLI.
 
 ```bash
