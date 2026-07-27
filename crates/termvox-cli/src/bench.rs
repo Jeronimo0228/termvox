@@ -1,7 +1,6 @@
-use std::{sync::Arc, time::Instant};
+use std::time::Instant;
 
 use anyhow::{Result, bail};
-use serde::Serialize;
 use termvox_core::AppConfig;
 use tokio_util::sync::CancellationToken;
 

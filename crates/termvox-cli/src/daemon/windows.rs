@@ -8,46 +8,19 @@ use std::{
 };
 
 use anyhow::{Context, Result, bail};
-use serde::{Deserialize, Serialize};
 use termvox_core::AppConfig;
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
-    net::{UnixListener, UnixStream},
+    net::windows::named_pipe::{ClientOptions, ServerOptions},
 };
 
 use crate::{runtime, setup};
 
-#[derive(Debug, Serialize, Deserialize)]
-struct IpcRequest {
-    cmd: String,
-}
+use super::{IpcRequest, IpcResponse, dispatch_request};
 
-#[derive(Debug, Serialize, Deserialize)]
-struct IpcResponse {
-    ok: bool,
-    message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    recording: Option<bool>,
-}
+const PIPE_NAME: &str = r"\\.\pipe\termvox-daemon";
 
-pub(crate) async fn run(action: DaemonAction, config: AppConfig, background: bool) -> Result<()> {
-    match action {
-        DaemonAction::Start => start(config, background).await,
-        DaemonAction::Stop => stop(),
-        DaemonAction::Status => status(),
-        DaemonAction::Talk => talk().await,
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum DaemonAction {
-    Start,
-    Stop,
-    Status,
-    Talk,
-}
-
-async fn start(config: AppConfig, background: bool) -> Result<()> {
+pub(super) async fn start(config: AppConfig, background: bool) -> Result<()> {
     if pid_path().exists() {
         bail!("TermVox daemon already running (pid file exists); run `termvox daemon stop`");
     }
@@ -59,29 +32,44 @@ async fn start(config: AppConfig, background: bool) -> Result<()> {
     write_pid_file()?;
     let result = run_daemon(config).await;
     let _ = std::fs::remove_file(pid_path());
-    let _ = std::fs::remove_file(socket_path());
     result
 }
 
 async fn run_daemon(config: AppConfig) -> Result<()> {
     let toggle_trigger = Arc::new(AtomicBool::new(false));
     let toggle_ipc = Arc::clone(&toggle_trigger);
-    let listener = bind_socket()?;
     let shutdown = Arc::new(AtomicBool::new(false));
     let shutdown_accept = Arc::clone(&shutdown);
     tokio::spawn(async move {
+        let mut server = match ServerOptions::new()
+            .first_pipe_instance(true)
+            .create(PIPE_NAME)
+        {
+            Ok(server) => server,
+            Err(error) => {
+                tracing::warn!("daemon pipe server failed: {error}");
+                return;
+            }
+        };
         loop {
             if shutdown_accept.load(Ordering::Acquire) {
                 break;
             }
-            let accept = listener.accept().await;
-            let Ok((stream, _)) = accept else {
+            if server.connect().await.is_err() {
                 tokio::time::sleep(std::time::Duration::from_millis(50)).await;
                 continue;
+            }
+            let connected = server;
+            server = match ServerOptions::new().create(PIPE_NAME) {
+                Ok(server) => server,
+                Err(error) => {
+                    tracing::warn!("daemon pipe recreate failed: {error}");
+                    break;
+                }
             };
             let toggle = Arc::clone(&toggle_ipc);
             tokio::spawn(async move {
-                let _ = handle_client(stream, toggle).await;
+                let _ = handle_client(connected, toggle).await;
             });
         }
     });
@@ -91,62 +79,45 @@ async fn run_daemon(config: AppConfig) -> Result<()> {
         daemon_config.confirmation = false;
     }
     let hotkey = daemon_config.daemon.hotkey.clone();
-    println!(
-        "TermVox daemon ready on {} (hotkey {hotkey})",
-        socket_path().display()
-    );
+    println!("TermVox daemon ready on {PIPE_NAME} (hotkey {hotkey})");
     runtime::start_daemon_session(daemon_config, &hotkey, toggle_trigger).await?;
     shutdown.store(true, Ordering::Release);
     Ok(())
 }
 
-pub(crate) fn paths() -> (PathBuf, PathBuf) {
-    (pid_path(), socket_path())
+pub(super) fn paths() -> (PathBuf, PathBuf) {
+    (pid_path(), PathBuf::from(PIPE_NAME))
 }
 
-async fn handle_client(stream: UnixStream, toggle: Arc<AtomicBool>) -> Result<()> {
-    let (reader, mut writer) = stream.into_split();
+async fn handle_client(
+    mut stream: tokio::net::windows::named_pipe::NamedPipeServer,
+    toggle: Arc<AtomicBool>,
+) -> Result<()> {
+    let (reader, mut writer) = stream.split();
     let mut lines = BufReader::new(reader).lines();
     let Some(line) = lines.next_line().await? else {
         return Ok(());
     };
     let request: IpcRequest = serde_json::from_str(&line).context("invalid daemon request")?;
-    let response = match request.cmd.as_str() {
-        "toggle" | "talk" => {
-            toggle.store(true, Ordering::Release);
-            IpcResponse {
-                ok: true,
-                message: "toggle queued".into(),
-                recording: None,
-            }
-        }
-        "status" => IpcResponse {
-            ok: true,
-            message: "running".into(),
-            recording: None,
-        },
-        other => IpcResponse {
-            ok: false,
-            message: format!("unknown command: {other}"),
-            recording: None,
-        },
-    };
+    let response = dispatch_request(&request.cmd, &toggle);
     writer
         .write_all(format!("{}\n", serde_json::to_string(&response)?).as_bytes())
         .await?;
     Ok(())
 }
 
-async fn talk() -> Result<()> {
-    if !socket_path().exists() {
+pub(super) async fn talk() -> Result<()> {
+    if !pid_path().exists() {
         bail!("TermVox daemon is not running; start it with `termvox daemon start --background`");
     }
-    let mut stream = UnixStream::connect(&socket_path()).await?;
-    stream
+    let mut client = ClientOptions::new()
+        .open(PIPE_NAME)
+        .context("failed to connect to TermVox daemon pipe")?;
+    client
         .write_all(b"{\"cmd\":\"toggle\"}\n")
         .await
         .context("failed to send talk request")?;
-    let mut reader = BufReader::new(stream);
+    let mut reader = BufReader::new(client);
     let mut line = String::new();
     reader.read_line(&mut line).await?;
     let response: IpcResponse = serde_json::from_str(line.trim())?;
@@ -158,7 +129,7 @@ async fn talk() -> Result<()> {
     }
 }
 
-fn stop() -> Result<()> {
+pub(super) fn stop() -> Result<()> {
     let pid_file = pid_path();
     if !pid_file.exists() {
         bail!("TermVox daemon is not running");
@@ -167,22 +138,20 @@ fn stop() -> Result<()> {
         .context("read daemon pid")?
         .trim()
         .to_owned();
-    Command::new("kill")
-        .arg(&pid)
+    Command::new("taskkill")
+        .args(["/PID", &pid, "/T", "/F"])
         .status()
-        .context("send SIGTERM to daemon")?;
+        .context("terminate daemon process")?;
     let _ = std::fs::remove_file(pid_file);
-    let _ = std::fs::remove_file(socket_path());
     println!("TermVox daemon stopped");
     Ok(())
 }
 
-fn status() -> Result<()> {
+pub(super) fn status() -> Result<()> {
     if pid_path().exists() {
         println!(
-            "running (pid {}, socket {})",
+            "running (pid {}, pipe {PIPE_NAME})",
             std::fs::read_to_string(pid_path())?.trim(),
-            socket_path().display()
         );
     } else {
         println!("not running");
@@ -212,17 +181,6 @@ fn spawn_background_daemon() -> Result<()> {
     Ok(())
 }
 
-fn bind_socket() -> Result<UnixListener> {
-    let path = socket_path();
-    if path.exists() {
-        let _ = std::fs::remove_file(&path);
-    }
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    UnixListener::bind(&path).with_context(|| format!("bind {}", path.display()))
-}
-
 fn write_pid_file() -> Result<()> {
     if let Some(parent) = pid_path().parent() {
         std::fs::create_dir_all(parent)?;
@@ -232,17 +190,7 @@ fn write_pid_file() -> Result<()> {
 }
 
 fn pid_path() -> PathBuf {
-    runtime_dir().join("termvox-daemon.pid")
-}
-
-fn socket_path() -> PathBuf {
-    runtime_dir().join("termvox-daemon.sock")
-}
-
-fn runtime_dir() -> PathBuf {
-    dirs::runtime_dir().unwrap_or_else(std::env::temp_dir)
-}
-
-pub(crate) fn take_toggle(trigger: &AtomicBool) -> bool {
-    trigger.swap(false, Ordering::AcqRel)
+    dirs::runtime_dir()
+        .unwrap_or_else(std::env::temp_dir)
+        .join("termvox-daemon.pid")
 }

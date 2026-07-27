@@ -67,22 +67,31 @@ terminal application—not the `termvox` executable by name—for microphone
 permission. Review it under **System Settings → Privacy & Security →
 Microphone**.
 
-## Windows
+### Windows
 
 Install Rust with the 64-bit MSVC toolchain and the Microsoft C++ Build Tools.
-In PowerShell:
+Pre-built binaries are published on [GitHub Releases](https://github.com/Jeronimo0228/termvox/releases).
+
+PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.ps1 | iex
+```
+
+Or build from source:
 
 ```powershell
 git clone https://github.com/Jeronimo0228/termvox.git
 Set-Location termvox
 cargo install --path crates/termvox-cli
-termvox.exe init
+termvox.exe init --preset cursor --force
 termvox.exe doctor
+termvox.exe daemon start --background
+termvox.exe talk
 ```
 
 Allow microphone access for desktop applications in Windows privacy settings.
-The current project does not claim a tested installer or code-signed Windows
-binary.
+Auto-paste uses PowerShell `SendKeys`; focus-by-title uses `WScript.Shell.AppActivate`.
 
 ## Speech engine setup
 

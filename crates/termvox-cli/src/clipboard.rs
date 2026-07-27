@@ -6,7 +6,7 @@ pub(crate) fn copy_text(text: &str) -> Result<()> {
         bail!("nothing to copy");
     }
     arboard::Clipboard::new()
-        .context("clipboard unavailable; install wl-clipboard on Wayland or xclip on X11")?
+        .context("clipboard unavailable; on Linux install wl-clipboard or xclip; on Windows ensure the clipboard service is running")?
         .set_text(text)
         .context("failed to write to the system clipboard")
 }

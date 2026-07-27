@@ -2,7 +2,6 @@ mod bench;
 mod cli;
 mod clipboard;
 mod commands;
-#[cfg(unix)]
 mod daemon;
 mod delivery;
 mod doctor;
