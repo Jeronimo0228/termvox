@@ -77,10 +77,7 @@ impl SessionUi {
                 );
             }
             AgentDisplayMode::Branded | AgentDisplayMode::Companion => {
-                eprintln!(
-                    "{}{}{}",
-                    self.theme.dim, self.theme.brand, self.theme.reset
-                );
+                eprintln!("{}{}{}", self.theme.dim, self.theme.brand, self.theme.reset);
                 self.write_status(&format!(
                     "{}{} {shortcut} globally · Ctrl+C quits{}",
                     self.theme.dim,

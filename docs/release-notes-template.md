@@ -1,4 +1,4 @@
-## TermVox v0.1.0-alpha.2 — voice prompts for coding agents
+## TermVox v0.1.0-alpha.3 — voice prompts for coding agents
 
 **TermVox** is an open-source CLI that turns your microphone into a fast, local speech-to-text bridge for **Cursor**, Claude Code, Codex, Gemini, and other agent CLIs.
 
