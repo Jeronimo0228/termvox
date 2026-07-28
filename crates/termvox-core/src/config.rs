@@ -120,6 +120,7 @@ pub struct AppConfig {
     pub pipeline: PipelineConfig,
     pub daemon: DaemonConfig,
     pub shell: ShellConfig,
+    pub workspace: WorkspaceConfig,
     pub telemetry: TelemetryConfig,
     /// Apply host hints (Wayland toggle, RAM profile suggestions).
     pub auto_tune_from_environment: bool,
@@ -151,6 +152,7 @@ impl Default for AppConfig {
             pipeline: PipelineConfig::default(),
             daemon: DaemonConfig::default(),
             shell: ShellConfig::default(),
+            workspace: WorkspaceConfig::default(),
             telemetry: TelemetryConfig::default(),
             auto_tune_from_environment: true,
             cursor: None,
@@ -255,6 +257,27 @@ impl Default for ShellConfig {
             skip_confirmation: true,
             exit_hotkey: "Ctrl+\\".into(),
             alt_hotkeys: vec!["Ctrl+Space".into()],
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct WorkspaceConfig {
+    /// Persist upstream session ids under the project directory for resume.
+    pub persist_session: bool,
+    /// Probe agent-local stores (Cursor/OpenCode/Claude) when no saved id exists.
+    pub discover_session: bool,
+    /// Relative path from the project root; default `.termvox/session.json`.
+    pub session_file: Option<PathBuf>,
+}
+
+impl Default for WorkspaceConfig {
+    fn default() -> Self {
+        Self {
+            persist_session: true,
+            discover_session: true,
+            session_file: None,
         }
     }
 }

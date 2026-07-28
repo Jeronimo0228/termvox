@@ -1,4 +1,5 @@
 /target/
+.termvox/
 termvox.toml
 *.wav
 *.bin

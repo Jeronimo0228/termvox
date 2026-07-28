@@ -72,7 +72,7 @@ fn should_block_sequence(sequence: &[u8]) -> bool {
     body.split(';').any(|part| {
         matches!(
             part.trim_start_matches('?'),
-            "9001" | "9002" | "1000" | "1002" | "1003" | "1006" | "884"
+            "9001" | "9002" | "1000" | "1002" | "1003" | "1006" | "884" | "2004"
         )
     })
 }
@@ -92,6 +92,13 @@ mod tests {
         let input = b"hello\x1b[?9001hworld";
         let filtered = filter_agent_output(input);
         assert_eq!(filtered, b"helloworld");
+    }
+
+    #[test]
+    fn blocks_bracketed_paste_enable() {
+        let input = b"prompt\x1b[?2004h";
+        let filtered = filter_agent_output(input);
+        assert_eq!(filtered, b"prompt");
     }
 
     #[test]

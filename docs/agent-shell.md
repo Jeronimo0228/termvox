@@ -57,7 +57,12 @@ Agent Shell replaces **companion** mode for interactive CLI use:
 termvox shell                    # uses agent from termvox.toml
 termvox shell --agent claude     # override for one session
 termvox shell --agent opencode   # OpenCode TUI + mic bar
+termvox shell --fresh            # ignore saved workspace session
 ```
+
+When `[workspace].persist_session` is enabled (default), TermVox saves the
+upstream session id to `.termvox/session.json` and passes resume flags on the
+next launch in the same project directory.
 
 Example layout:
 
@@ -66,7 +71,7 @@ Example layout:
 │  <upstream agent TUI — unchanged>       │
 │  ...                                    │
 ├─────────────────────────────────────────┤
-│ 🎤 TermVox · F8 · es · whisper-tiny     │
+│ 🎤 TermVox · Cursor · ES · listo · voz Ctrl+Space · salir Ctrl+\ │
 └─────────────────────────────────────────┘
 ```
 

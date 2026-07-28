@@ -2,6 +2,7 @@
 
 mod bar;
 mod keys;
+mod messages;
 mod pty_filter;
 
 use std::{
@@ -21,9 +22,13 @@ use crossterm::{
     terminal::{self, ClearType},
 };
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
-use termvox_agents::{InteractiveLaunch, SupportedAgent};
+use termvox_agents::{extract_session_id, scan_output_for_session_id, InteractiveLaunch, SupportedAgent};
 use termvox_audio::AudioRecorder;
-use termvox_core::{agent_ui, AgentAdapter, AgentKind, AppConfig, SpeechEngine};
+use termvox_core::{
+    agent_ui, AgentAdapter, AgentKind, AppConfig, SpeechEngine,
+};
+
+use crate::workspace;
 use tokio_util::sync::CancellationToken;
 
 use crate::runtime::{
@@ -41,6 +46,7 @@ pub async fn run(
     config: AppConfig,
     agent: AgentKind,
     trailing_args: Vec<String>,
+    fresh: bool,
 ) -> Result<()> {
     let cli_agent = configured_cli_agent_kind(agent, &config);
     let info = cli_agent.probe().await;
@@ -53,23 +59,45 @@ pub async fn run(
     ensure_agent_authenticated(&info)?;
     let speech = ensure_speech_engine(&config).await?;
     schedule_prewarm(Arc::clone(&speech), &config.whisper);
+    let cwd = std::env::current_dir()?;
     let profile = config.agents.profile(agent);
+    let remote_id = if fresh {
+        None
+    } else {
+        workspace::load_remote_id(&config, agent, &cwd)
+    };
     let launch = cli_agent.interactive_launch(
-        &std::env::current_dir()?,
+        &cwd,
         &trailing_args,
-        &profile.invocation(),
+        &profile.shell_invocation(),
+        remote_id.as_deref(),
     );
     let config = Arc::new(config);
-    tokio::task::spawn_blocking(move || run_session(&config, agent, &launch, &speech))
-        .await
-        .context("shell session task failed")?
+    let supported = to_supported(agent);
+    tokio::task::spawn_blocking(move || {
+        run_session(
+            &config,
+            agent,
+            supported,
+            &launch,
+            &speech,
+            &cwd,
+            remote_id,
+        )
+    })
+    .await
+    .context("shell session task failed")?
 }
 
+#[allow(clippy::too_many_lines)]
 fn run_session(
     config: &AppConfig,
     agent: AgentKind,
+    supported: SupportedAgent,
     launch: &InteractiveLaunch,
     speech: &Arc<dyn SpeechEngine>,
+    cwd: &std::path::Path,
+    resumed_remote_id: Option<String>,
 ) -> Result<()> {
     let rt = tokio::runtime::Handle::current();
     terminal::enable_raw_mode().context("enable raw mode")?;
@@ -87,7 +115,22 @@ fn run_session(
         rows,
         cols,
     );
+    bar.set_session_hint(resumed_remote_id.clone());
+    if let Some(id) = &resumed_remote_id {
+        bar.set_state(BarState::Notice(messages::resume_notice(
+            &config.language,
+            id,
+        )));
+        bar.draw()?;
+        std::thread::sleep(Duration::from_millis(900));
+        bar.set_state(BarState::Ready);
+    }
     bar.draw()?;
+
+    let mut workspace_session =
+        termvox_core::WorkspaceSession::new(agent, cwd.to_path_buf());
+    workspace_session.remote_id = resumed_remote_id;
+    let captured_remote = Arc::new(Mutex::new(workspace_session.remote_id.clone()));
 
     let pty_system = native_pty_system();
     let pair = pty_system
@@ -115,7 +158,16 @@ fn run_session(
     let stop_reader = Arc::new(AtomicBool::new(false));
     let stop_copy = Arc::clone(&stop_reader);
     let (pty_activity_tx, pty_activity_rx) = mpsc::channel();
-    let copy_agent = thread::spawn(move || copy_pty_output(&mut reader, &stop_copy, &pty_activity_tx));
+    let capture = Arc::clone(&captured_remote);
+    let copy_agent = thread::spawn(move || {
+        copy_pty_output(
+            &mut reader,
+            &stop_copy,
+            &pty_activity_tx,
+            supported,
+            &capture,
+        )
+    });
 
     let child = Arc::new(Mutex::new(child));
     let (exit_tx, exit_rx) = mpsc::channel();
@@ -131,12 +183,49 @@ fn run_session(
     let mut awaiting_confirm: Option<String> = None;
     let mut anim_frame = 0_u8;
     let mut last_bar_draw = Instant::now();
+    let mut last_persist = Instant::now();
     let mut running = true;
+
+    let discover_agent = supported;
+    let discover_cwd = cwd.to_path_buf();
+    let discover_target = Arc::clone(&captured_remote);
+    let discover_stop = Arc::clone(&stop_reader);
+    thread::spawn(move || {
+        while !discover_stop.load(Ordering::Acquire) {
+            if discover_target.lock().expect("session mutex").is_some() {
+                break;
+            }
+            if let Some(id) = termvox_agents::discover_remote_session(discover_agent, &discover_cwd)
+            {
+                *discover_target.lock().expect("session mutex") = Some(id);
+                break;
+            }
+            thread::sleep(Duration::from_secs(5));
+        }
+    });
 
     while running {
         if exit_rx.try_recv().is_ok() {
             running = false;
             continue;
+        }
+
+        if let Some(remote_id) = captured_remote.lock().expect("session mutex").clone() {
+            if workspace_session.remote_id.as_deref() != Some(remote_id.as_str()) {
+                workspace_session.touch_remote_id(remote_id.clone());
+                bar.set_session_hint(Some(remote_id));
+                last_persist = Instant::now();
+            }
+        }
+
+        if config.workspace.persist_session && last_persist.elapsed() >= Duration::from_secs(15) {
+            workspace::persist_remote_id(
+                config,
+                agent,
+                cwd,
+                workspace_session.remote_id.clone(),
+            );
+            last_persist = Instant::now();
         }
 
         if let Some(recorder_ref) = &recorder {
@@ -160,7 +249,7 @@ fn run_session(
             last_bar_draw,
             awaiting_confirm.is_some(),
         ) {
-            if recorder.is_some() {
+            if recorder.is_some() || bar.needs_animation() {
                 anim_frame = anim_frame.wrapping_add(1);
                 let level = recorder.as_ref().map_or(0.0, AudioRecorder::input_level);
                 bar.set_recording_visuals(anim_frame, level);
@@ -175,7 +264,6 @@ fn run_session(
                     config,
                     speech,
                     &rt,
-                    &voice_hotkeys,
                     &mut recorder,
                     &mut bar,
                     &mut writer,
@@ -222,7 +310,6 @@ fn run_session(
                     config,
                     speech,
                     &rt,
-                    &voice_hotkeys,
                     &mut recorder,
                     &mut bar,
                     &mut writer,
@@ -258,6 +345,14 @@ fn run_session(
     stop_reader.store(true, Ordering::Release);
     let _ = copy_agent.join();
     let _ = child.lock().expect("child mutex").kill();
+    if config.workspace.persist_session {
+        workspace::persist_remote_id(
+            config,
+            agent,
+            cwd,
+            workspace_session.remote_id.clone(),
+        );
+    }
     bar.set_state(BarState::Exiting);
     bar.draw()?;
     guard.restore()?;
@@ -283,7 +378,6 @@ fn toggle_voice(
     config: &AppConfig,
     speech: &Arc<dyn SpeechEngine>,
     rt: &tokio::runtime::Handle,
-    _voice_hotkeys: &[String],
     recorder: &mut Option<AudioRecorder>,
     bar: &mut ShellBar,
     writer: &mut impl Write,
@@ -333,15 +427,55 @@ fn handle_finished_recording(
 ) -> Result<()> {
     bar.set_state(BarState::Transcribing);
     bar.draw()?;
-    let prepared = rt.block_on(prepare_utterance(
-        config,
-        audio,
-        speech.as_ref(),
-        None,
-        CancellationToken::new(),
-    ))?;
-    let Some(prepared) = prepared else {
-        bar.set_state(BarState::Error("No se detectó voz".into()));
+
+    let (partial_tx, partial_rx) = mpsc::channel::<String>();
+    let (done_tx, done_rx) = mpsc::channel();
+    let shared_config = Arc::new(config.clone());
+    let speech = Arc::clone(speech);
+    let rt = rt.clone();
+    let worker_config = Arc::clone(&shared_config);
+    let worker = thread::spawn(move || {
+        let on_partial = Arc::new(move |text: String| {
+            let _ = partial_tx.send(text);
+        });
+        let result = rt.block_on(prepare_utterance(
+            &worker_config,
+            audio,
+            speech.as_ref(),
+            Some(on_partial),
+            CancellationToken::new(),
+        ));
+        let _ = done_tx.send(result);
+    });
+
+    loop {
+        while let Ok(partial) = partial_rx.try_recv() {
+            bar.set_state(BarState::Partial(partial));
+            bar.draw()?;
+        }
+        if let Ok(result) = done_rx.try_recv() {
+            let _ = worker.join();
+            return finish_prepared_utterance(
+                shared_config.as_ref(),
+                bar,
+                writer,
+                awaiting_confirm,
+                result,
+            );
+        }
+        thread::sleep(Duration::from_millis(25));
+    }
+}
+
+fn finish_prepared_utterance(
+    config: &AppConfig,
+    bar: &mut ShellBar,
+    writer: &mut impl Write,
+    awaiting_confirm: &mut Option<String>,
+    prepared: Result<Option<crate::runtime::PreparedUtterance>>,
+) -> Result<()> {
+    let Some(prepared) = prepared? else {
+        bar.set_state(BarState::Error(messages::no_speech(&config.language)));
         bar.draw()?;
         std::thread::sleep(Duration::from_millis(900));
         bar.set_state(BarState::Ready);
@@ -352,7 +486,10 @@ fn handle_finished_recording(
     let must_confirm = prepared.requires_confirmation && !config.shell.skip_confirmation;
     if must_confirm {
         *awaiting_confirm = Some(prepared.prompt);
-        bar.set_state(BarState::Confirm(prepared.transcript));
+        bar.set_state(BarState::Confirm(messages::confirm(
+            &config.language,
+            &prepared.transcript,
+        )));
         bar.draw()?;
         return Ok(());
     }
@@ -373,9 +510,7 @@ fn inject_prompt(
         writer.write_all(b"\r").context("submit prompt")?;
     }
     writer.flush().context("flush agent stdin")?;
-    bar.set_state(BarState::Injected(
-        "Transcripción enviada al agente".into(),
-    ));
+    bar.set_state(BarState::Injected(messages::injected(&config.language)));
     bar.draw()?;
     std::thread::sleep(Duration::from_millis(600));
     bar.set_state(BarState::Ready);
@@ -387,14 +522,34 @@ fn copy_pty_output(
     reader: &mut dyn io::Read,
     stop: &AtomicBool,
     activity: &mpsc::Sender<()>,
+    agent: SupportedAgent,
+    captured_remote: &Arc<Mutex<Option<String>>>,
 ) {
     let mut buffer = [0_u8; 8192];
+    let mut line_buffer = Vec::new();
     let mut stdout = io::stdout();
     while !stop.load(Ordering::Acquire) {
         match reader.read(&mut buffer) {
             Ok(0) => break,
             Ok(count) => {
                 let filtered = pty_filter::filter_agent_output(&buffer[..count]);
+                if let Ok(chunk) = std::str::from_utf8(&filtered) {
+                    if let Some(id) = scan_output_for_session_id(agent, chunk) {
+                        *captured_remote.lock().expect("session mutex") = Some(id);
+                    }
+                }
+                for byte in &filtered {
+                    if *byte == b'\n' {
+                        if let Ok(line) = std::str::from_utf8(&line_buffer) {
+                            if let Some(id) = extract_session_id(agent, line) {
+                                *captured_remote.lock().expect("session mutex") = Some(id);
+                            }
+                        }
+                        line_buffer.clear();
+                    } else {
+                        line_buffer.push(*byte);
+                    }
+                }
                 if !filtered.is_empty() {
                     let _ = stdout.write_all(&filtered);
                     let _ = stdout.flush();
@@ -441,8 +596,9 @@ impl TerminalGuard {
         }
         terminal::disable_raw_mode().context("disable raw mode")?;
         let mut stdout = io::stdout();
-        write!(stdout, "\x1b[r\x1b[?25h\r\n")?;
+        write!(stdout, "\x1b[r\x1b[?1049l\x1b[?25h\r\n")?;
         stdout.flush()?;
+        pty_filter::reclaim_host_keyboard(&mut stdout)?;
         self.active = false;
         Ok(())
     }
@@ -456,7 +612,6 @@ impl Drop for TerminalGuard {
 
 use crossterm::ExecutableCommand;
 
-#[allow(dead_code)]
 const fn to_supported(agent: AgentKind) -> SupportedAgent {
     match agent {
         AgentKind::Codex => SupportedAgent::Codex,

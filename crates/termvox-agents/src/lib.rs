@@ -16,10 +16,14 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 
 mod auth;
+mod invocation;
 mod parsers;
+mod session_discover;
 mod shell;
 
 pub use auth::check_auth;
+pub use invocation::interactive_resume_args;
+pub use session_discover::{discover_remote_session, scan_output_for_session_id};
 pub use shell::InteractiveLaunch;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -144,12 +148,14 @@ impl CliAgent {
         cwd: &Path,
         trailing_args: &[String],
         invocation: &termvox_core::AgentInvocationOptions,
+        remote_id: Option<&str>,
     ) -> InteractiveLaunch {
         self.kind.interactive_launch(
             self.executable.clone(),
             cwd,
             invocation,
             trailing_args,
+            remote_id,
         )
     }
 
@@ -424,6 +430,15 @@ fn parse_line(kind: SupportedAgent, line: &str) -> Option<AgentEvent> {
         SupportedAgent::Aider => parsers::aider::parse(line),
         SupportedAgent::Amp => parsers::amp::parse(line),
         SupportedAgent::OpenCode => parsers::opencode::parse(line),
+    }
+}
+
+/// Extract upstream session identifiers from a single JSONL line when present.
+#[must_use]
+pub fn extract_session_id(kind: SupportedAgent, line: &str) -> Option<String> {
+    match parse_line(kind, line)? {
+        AgentEvent::Started { session_id: Some(id) } => Some(id),
+        _ => None,
     }
 }
 

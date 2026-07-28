@@ -27,6 +27,7 @@ use crate::{
     session_ui::SessionUi,
     telemetry,
     ui::{RawMode, confirm, parse_key, print_agent_event},
+    workspace,
 };
 
 pub fn resolve_toggle(config: &AppConfig, toggle_flag: bool) -> bool {
@@ -83,9 +84,15 @@ pub(crate) async fn start(
     if !is_companion_mode(&config) {
         ensure_agent_authenticated(&info)?;
     }
+    let profile = config.agents.profile(config.agent);
+    if profile.resolved_display(config.agent) == AgentDisplayMode::Shell {
+        let kind = config.agent;
+        return crate::shell::run(config, kind, Vec::new(), false).await;
+    }
     let speech = ensure_speech_engine(&config).await?;
     schedule_prewarm(Arc::clone(&speech), &config.whisper);
     let session = agent.start().await?;
+    workspace::hydrate_agent_session(&config, config.agent, &session, false).await;
     let ui = session_ui(&config, toggle);
     let shutdown = CancellationToken::new();
     let signal_cancel = shutdown.clone();
@@ -157,6 +164,7 @@ pub(crate) async fn start(
         }
         agent.cancel(&session).await?;
         agent.shutdown().await?;
+        workspace::save_agent_session(&config, config.agent, &session).await;
         return Ok(());
     }
     let _raw_mode = RawMode::enter()?;
@@ -229,6 +237,7 @@ pub(crate) async fn start(
     shutdown.cancel();
     agent.cancel(&session).await?;
     agent.shutdown().await?;
+    workspace::save_agent_session(&config, config.agent, &session).await;
     Ok(())
 }
 
@@ -244,6 +253,7 @@ pub(crate) async fn start_daemon_session(
     let speech = ensure_speech_engine(&config).await?;
     schedule_prewarm(Arc::clone(&speech), &config.whisper);
     let session = agent.start().await?;
+    workspace::hydrate_agent_session(&config, config.agent, &session, false).await;
     let ui = session_ui(&config, true);
     let registration = HotkeyRegistration::register(hotkey)?;
     ui.show_global_ready(hotkey);
@@ -317,6 +327,7 @@ pub(crate) async fn start_daemon_session(
     }
     agent.cancel(&session).await?;
     agent.shutdown().await?;
+    workspace::save_agent_session(&config, config.agent, &session).await;
     Ok(())
 }
 
@@ -408,6 +419,7 @@ async fn process_utterance(
     while let Some(event) = events.recv().await {
         print_agent_event(&event?, theme);
     }
+    workspace::save_agent_session(config, config.agent, session).await;
     Ok(())
 }
 

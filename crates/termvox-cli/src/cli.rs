@@ -88,6 +88,9 @@ enum Commands {
     Shell {
         #[arg(long, value_name = "AGENT")]
         agent: Option<String>,
+        /// Ignore saved workspace session and start the upstream agent fresh.
+        #[arg(long)]
+        fresh: bool,
         #[arg(last = true, allow_hyphen_values = true)]
         agent_args: Vec<String>,
     },
@@ -234,13 +237,17 @@ pub(crate) async fn run() -> Result<()> {
         }
         Commands::Completions { shell } => commands::completions(shell),
         Commands::Manpage { output } => commands::manpage(output.as_deref())?,
-        Commands::Shell { agent, agent_args } => {
+        Commands::Shell {
+            agent,
+            fresh,
+            agent_args,
+        } => {
             let config = setup::load_config(cli.config.as_deref())?;
             let kind = match agent {
                 Some(value) => shim::parse_agent_kind(&value)?,
                 None => config.agent,
             };
-            shell::run(config, kind, agent_args).await?;
+            shell::run(config, kind, agent_args, fresh).await?;
         }
         Commands::InstallShim { agent, force } => {
             let config = setup::load_config(cli.config.as_deref())?;
