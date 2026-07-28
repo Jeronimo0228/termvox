@@ -182,6 +182,7 @@ impl Default for AudioConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct WhisperConfig {
     pub model: PathBuf,
     /// Decoder worker count. Zero selects the available CPU parallelism.
@@ -357,10 +358,10 @@ impl AppConfig {
     }
 
     fn normalize_legacy(&mut self) {
-        if let Some(legacy) = self.cursor.take() {
-            if legacy.trust_workspace {
-                self.agents.cursor.trust_workspace = true;
-            }
+        if let Some(legacy) = self.cursor.take()
+            && legacy.trust_workspace
+        {
+            self.agents.cursor.trust_workspace = true;
         }
     }
 

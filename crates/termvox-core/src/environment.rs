@@ -2,6 +2,7 @@ use crate::PerformanceProfile;
 
 /// Host environment hints used to tune defaults.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct EnvironmentHints {
     pub wayland: bool,
     pub windows: bool,

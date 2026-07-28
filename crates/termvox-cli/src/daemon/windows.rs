@@ -90,10 +90,10 @@ pub(super) fn paths() -> (PathBuf, PathBuf) {
 }
 
 async fn handle_client(
-    mut stream: tokio::net::windows::named_pipe::NamedPipeServer,
+    stream: tokio::net::windows::named_pipe::NamedPipeServer,
     toggle: Arc<AtomicBool>,
 ) -> Result<()> {
-    let (reader, mut writer) = stream.split();
+    let (reader, mut writer) = tokio::io::split(stream);
     let mut lines = BufReader::new(reader).lines();
     let Some(line) = lines.next_line().await? else {
         return Ok(());
