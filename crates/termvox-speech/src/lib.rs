@@ -2,7 +2,8 @@
 #![allow(
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss,
-    clippy::missing_errors_doc
+    clippy::missing_errors_doc,
+    clippy::too_many_lines
 )]
 
 #[cfg(feature = "embedded-whisper")]
@@ -175,8 +176,7 @@ fn transcribe_embedded(
     let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
     let threads = if config.threads == 0 {
         std::thread::available_parallelism()
-            .map(std::num::NonZeroUsize::get)
-            .unwrap_or(4)
+            .map_or(4, std::num::NonZeroUsize::get)
             .min(config.max_threads.max(1))
     } else {
         config.threads
@@ -224,9 +224,9 @@ fn transcribe_embedded(
             if streaming_cancel.is_cancelled() {
                 return;
             }
-            let mut accumulated = partial_acc
-                .lock()
-                .unwrap_or_else(|error| error.into_inner());
+            let Ok(mut accumulated) = partial_acc.lock() else {
+                return;
+            };
             accumulated.push_str(&segment.text);
             on_partial(accumulated.clone());
         });

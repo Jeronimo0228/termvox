@@ -181,8 +181,7 @@ pub(crate) async fn model(config: AppConfig, command: ModelCommand) -> Result<()
 
 fn resolve_model<'a>(manifest: &'a ModelManifest, requested: &str) -> Result<&'a ModelArtifact> {
     let id = match requested {
-        "default" | "fast" => "whisper-tiny",
-        "balanced" => "whisper-tiny",
+        "default" | "fast" | "balanced" => "whisper-tiny",
         "accurate" | "base" => "whisper-base",
         other => other,
     };

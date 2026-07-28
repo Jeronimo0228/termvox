@@ -5,6 +5,7 @@
     clippy::cast_sign_loss,
     clippy::missing_errors_doc,
     clippy::too_many_arguments,
+    clippy::too_many_lines,
     clippy::unused_async
 )]
 
@@ -212,6 +213,16 @@ impl AudioRecorder {
             "native audio support was disabled at compile time".into(),
         ))
     }
+
+    #[must_use]
+    pub fn auto_stop_triggered(&self) -> bool {
+        false
+    }
+
+    #[must_use]
+    pub fn metrics(&self) -> AudioMetrics {
+        AudioMetrics::default()
+    }
 }
 
 #[cfg(feature = "native-audio")]
@@ -272,12 +283,11 @@ where
                 mono.extend(data.chunks(channels).map(|frame| {
                     frame.iter().copied().map(convert).sum::<f32>() / frame.len() as f32
                 }));
-                if let Some(vad) = &live_vad {
-                    if let Ok(mut vad) = vad.lock() {
-                        if vad.process(&mono) == VadDecision::SpeechEnded {
-                            auto_stop.store(true, Ordering::Release);
-                        }
-                    }
+                if let Some(vad) = &live_vad
+                    && let Ok(mut vad) = vad.lock()
+                    && vad.process(&mono) == VadDecision::SpeechEnded
+                {
+                    auto_stop.store(true, Ordering::Release);
                 }
                 if let Err(error) = tx.try_send(mono) {
                     recycle_frame(&frame_pool, error.into_inner());

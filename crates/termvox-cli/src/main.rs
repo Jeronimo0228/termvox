@@ -1,3 +1,16 @@
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::collapsible_if,
+    clippy::empty_line_after_outer_attr,
+    clippy::needless_pass_by_ref_mut,
+    clippy::semicolon_if_nothing_returned,
+    clippy::too_many_arguments,
+    clippy::too_many_lines,
+    clippy::unused_self,
+    dead_code
+)]
 mod bench;
 mod cli;
 mod clipboard;

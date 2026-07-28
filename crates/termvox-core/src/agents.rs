@@ -27,7 +27,7 @@ impl PromptDelivery {
     }
 }
 
-/// How TermVox presents status and output for a coding-agent CLI.
+/// How `TermVox` presents status and output for a coding-agent CLI.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "kebab-case")]
 pub enum AgentDisplayMode {
@@ -36,7 +36,7 @@ pub enum AgentDisplayMode {
     Branded,
     /// Voice layer only — transcribe and emit a styled prompt for an external agent TUI.
     Companion,
-    /// Legacy multi-line TermVox output.
+    /// Legacy multi-line `TermVox` output.
     Verbose,
 }
 
@@ -147,11 +147,11 @@ impl AgentsConfig {
 
     #[must_use]
     pub fn resolve_executable(&self, kind: AgentKind) -> PathBuf {
-        self.profile(kind)
-            .executable
-            .as_deref()
-            .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from(kind.default_executable()))
+        if let Some(executable) = self.profile(kind).executable.as_deref() {
+            PathBuf::from(executable)
+        } else {
+            PathBuf::from(kind.default_executable())
+        }
     }
 }
 
@@ -186,8 +186,6 @@ impl AgentProfile {
         }
         if self.resolved_display(kind) == AgentDisplayMode::Companion && kind == AgentKind::Cursor {
             PromptDelivery::Both
-        } else if self.resolved_display(kind) == AgentDisplayMode::Companion {
-            PromptDelivery::Clipboard
         } else {
             PromptDelivery::Clipboard
         }

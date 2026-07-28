@@ -78,8 +78,8 @@ impl SessionUi {
             }
             AgentDisplayMode::Branded | AgentDisplayMode::Companion => {
                 eprintln!(
-                    "{}{}{}{}",
-                    self.theme.dim, self.theme.brand, self.theme.reset, ""
+                    "{}{}{}",
+                    self.theme.dim, self.theme.brand, self.theme.reset
                 );
                 self.write_status(&format!(
                     "{}{} {shortcut} globally · Ctrl+C quits{}",
@@ -207,7 +207,7 @@ impl SessionUi {
         }
     }
 
-    pub(crate) fn show_delivery(&self, outcome: &DeliveryOutcome, window_title: Option<&str>) {
+    pub(crate) fn show_delivery(&self, outcome: DeliveryOutcome, window_title: Option<&str>) {
         if self.mode == AgentDisplayMode::Companion {
             let detail = match (outcome.clipboard, outcome.paste) {
                 (true, true) => match window_title {

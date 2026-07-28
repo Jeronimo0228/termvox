@@ -374,7 +374,7 @@ async fn process_utterance(
         let delivery_mode = profile.resolved_delivery(config.agent);
         let paste_window = profile.resolved_paste_window_title(config.agent);
         match delivery::deliver_prompt(&prompt, delivery_mode, paste_window) {
-            Ok(outcome) => ui.show_delivery(&outcome, paste_window),
+            Ok(outcome) => ui.show_delivery(outcome, paste_window),
             Err(error) => ui.show_delivery_failed(&error.to_string()),
         }
         let _ = telemetry::record_utterance(
