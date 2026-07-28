@@ -13,7 +13,7 @@
 use std::{
     sync::{
         Arc, Mutex,
-        atomic::{AtomicBool, AtomicU64, Ordering},
+        atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering},
     },
     time::Duration,
 };
@@ -46,6 +46,7 @@ pub struct AudioRecorder {
     target_rate: u32,
     dropped_frames: Arc<AtomicU64>,
     auto_stop_triggered: Arc<AtomicBool>,
+    input_level: Arc<AtomicU32>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -68,6 +69,7 @@ impl AudioRecorder {
         let (tx, mut rx) = mpsc::channel::<Vec<f32>>(FRAME_CHANNEL_CAPACITY);
         let dropped_frames = Arc::new(AtomicU64::new(0));
         let auto_stop_triggered = Arc::new(AtomicBool::new(false));
+        let input_level = Arc::new(AtomicU32::new(0));
         let frame_pool = Arc::new(ArrayQueue::new(FRAME_CHANNEL_CAPACITY + 1));
         for _ in 0..=FRAME_CHANNEL_CAPACITY {
             let _ = frame_pool.push(Vec::with_capacity(MAX_CALLBACK_SAMPLES));
@@ -87,6 +89,7 @@ impl AudioRecorder {
         });
         let live_vad_for_callback = live_vad.clone();
         let auto_stop_for_callback = Arc::clone(&auto_stop_triggered);
+        let level_for_callback = Arc::clone(&input_level);
         let collector = tokio::spawn(async move {
             loop {
                 tokio::select! {
@@ -118,6 +121,7 @@ impl AudioRecorder {
                 Arc::clone(&dropped),
                 live_vad_for_callback,
                 auto_stop_for_callback,
+                level_for_callback,
                 error_callback,
                 |sample: f32| sample,
             ),
@@ -130,6 +134,7 @@ impl AudioRecorder {
                 Arc::clone(&dropped),
                 live_vad_for_callback.clone(),
                 Arc::clone(&auto_stop_for_callback),
+                Arc::clone(&level_for_callback),
                 error_callback,
                 |sample: i16| f32::from(sample) / f32::from(i16::MAX),
             ),
@@ -142,6 +147,7 @@ impl AudioRecorder {
                 dropped,
                 live_vad_for_callback,
                 auto_stop_for_callback,
+                level_for_callback,
                 error_callback,
                 |sample: u16| (f32::from(sample) / f32::from(u16::MAX)).mul_add(2.0, -1.0),
             ),
@@ -162,12 +168,19 @@ impl AudioRecorder {
             target_rate: config.sample_rate,
             dropped_frames,
             auto_stop_triggered,
+            input_level,
         })
     }
 
     #[must_use]
     pub fn auto_stop_triggered(&self) -> bool {
         self.auto_stop_triggered.load(Ordering::Acquire)
+    }
+
+    /// Normalized input level from recent audio frames (0.0–1.0).
+    #[must_use]
+    pub fn input_level(&self) -> f32 {
+        f32::from_bits(self.input_level.load(Ordering::Relaxed))
     }
 
     #[must_use]
@@ -220,6 +233,11 @@ impl AudioRecorder {
     }
 
     #[must_use]
+    pub fn input_level(&self) -> f32 {
+        0.0
+    }
+
+    #[must_use]
     pub fn metrics(&self) -> AudioMetrics {
         AudioMetrics::default()
     }
@@ -257,6 +275,7 @@ fn build_stream<T, E, C>(
     dropped_frames: Arc<AtomicU64>,
     live_vad: Option<Arc<Mutex<VadStateMachine>>>,
     auto_stop: Arc<AtomicBool>,
+    input_level: Arc<AtomicU32>,
     error_callback: E,
     convert: C,
 ) -> Result<Stream>
@@ -283,6 +302,14 @@ where
                 mono.extend(data.chunks(channels).map(|frame| {
                     frame.iter().copied().map(convert).sum::<f32>() / frame.len() as f32
                 }));
+                if !mono.is_empty() {
+                    let rms = (mono.iter().map(|sample| sample * sample).sum::<f32>()
+                        / mono.len() as f32)
+                        .sqrt();
+                    let previous = f32::from_bits(input_level.load(Ordering::Relaxed));
+                    let smoothed = previous.mul_add(0.65, rms * 0.35);
+                    input_level.store(smoothed.to_bits(), Ordering::Relaxed);
+                }
                 if let Some(vad) = &live_vad
                     && let Ok(mut vad) = vad.lock()
                     && vad.process(&mono) == VadDecision::SpeechEnded

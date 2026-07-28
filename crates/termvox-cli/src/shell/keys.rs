@@ -4,12 +4,31 @@ use std::io::Write;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
-/// Returns true when the key event matches the configured shell voice hotkey.
+/// Returns true when the key event matches a configured hotkey string (`F8`, `Ctrl+\\`, …).
 #[must_use]
-pub fn is_voice_hotkey(event: &KeyEvent, specification: &str) -> bool {
+pub fn matches_hotkey(event: &KeyEvent, specification: &str) -> bool {
     if event.kind != KeyEventKind::Press {
         return false;
     }
+    let Some((expected_code, expected_modifiers)) = parse_hotkey(specification) else {
+        return false;
+    };
+    event.code == expected_code && event.modifiers == expected_modifiers
+}
+
+/// Returns true when the key event matches the configured shell voice hotkey.
+#[must_use]
+pub fn is_voice_hotkey(event: &KeyEvent, specification: &str) -> bool {
+    matches_hotkey(event, specification)
+}
+
+/// Returns true when the key event should leave the integrated shell wrapper.
+#[must_use]
+pub fn is_shell_exit(event: &KeyEvent, specification: &str) -> bool {
+    matches_hotkey(event, specification)
+}
+
+fn parse_hotkey(specification: &str) -> Option<(KeyCode, KeyModifiers)> {
     let mut modifiers = KeyModifiers::empty();
     let mut code = None;
     for token in specification.split('+').map(str::trim) {
@@ -19,128 +38,94 @@ pub fn is_voice_hotkey(event: &KeyEvent, specification: &str) -> bool {
             "SHIFT" => modifiers |= KeyModifiers::SHIFT,
             "SUPER" | "META" | "CMD" => modifiers |= KeyModifiers::SUPER,
             "SPACE" => code = Some(KeyCode::Char(' ')),
+            "ENTER" => code = Some(KeyCode::Enter),
+            "ESC" | "ESCAPE" => code = Some(KeyCode::Esc),
+            "BACKSPACE" => code = Some(KeyCode::Backspace),
+            "TAB" => code = Some(KeyCode::Tab),
+            "F1" => code = Some(KeyCode::F(1)),
+            "F2" => code = Some(KeyCode::F(2)),
+            "F3" => code = Some(KeyCode::F(3)),
+            "F4" => code = Some(KeyCode::F(4)),
+            "F5" => code = Some(KeyCode::F(5)),
+            "F6" => code = Some(KeyCode::F(6)),
+            "F7" => code = Some(KeyCode::F(7)),
             "F8" => code = Some(KeyCode::F(8)),
             "F9" => code = Some(KeyCode::F(9)),
             "F10" => code = Some(KeyCode::F(10)),
             "F11" => code = Some(KeyCode::F(11)),
             "F12" => code = Some(KeyCode::F(12)),
+            "\\" | "BACKSLASH" => code = Some(KeyCode::Char('\\')),
+            _ if token.len() == 1 => {
+                code = token.chars().next().map(KeyCode::Char);
+            }
             _ => {}
         }
     }
-    let Some(expected) = code else {
-        return false;
-    };
-    event.code == expected && event.modifiers == modifiers
+    code.map(|key_code| (key_code, modifiers))
 }
 
 /// Forwards a terminal key event to the agent PTY as bytes.
-///
-/// Returns `Ok(true)` when the event was consumed (not forwarded).
-pub fn forward_key(event: KeyEvent, writer: &mut impl Write) -> std::io::Result<bool> {
-    match event {
-        KeyEvent {
-            code: KeyCode::Char('c'),
-            modifiers,
-            kind: KeyEventKind::Press,
-            ..
-        } if modifiers.contains(KeyModifiers::CONTROL) => Ok(true),
-        KeyEvent {
-            kind: KeyEventKind::Press,
-            code: KeyCode::Char(c),
-            ..
-        } => {
-            writer.write_all(c.encode_utf8(&mut [0; 4]).as_bytes())?;
-            Ok(false)
+pub fn forward_key(event: KeyEvent, writer: &mut impl Write) -> std::io::Result<()> {
+    if event.kind != KeyEventKind::Press {
+        return Ok(());
+    }
+
+    match event.code {
+        KeyCode::Char(ch) if event.modifiers.contains(KeyModifiers::CONTROL) => {
+            writer.write_all(&[control_byte(ch)])?;
         }
-        KeyEvent {
-            kind: KeyEventKind::Press,
-            code: KeyCode::Enter,
-            ..
-        } => {
-            writer.write_all(b"\r")?;
-            Ok(false)
+        KeyCode::Char(ch) if event.modifiers.contains(KeyModifiers::ALT) => {
+            writer.write_all(&[0x1b, ch as u8])?;
         }
-        KeyEvent {
-            kind: KeyEventKind::Press,
-            code: KeyCode::Backspace,
-            ..
-        } => {
-            writer.write_all(b"\x7f")?;
-            Ok(false)
-        }
-        KeyEvent {
-            kind: KeyEventKind::Press,
-            code: KeyCode::Tab,
-            ..
-        } => {
-            writer.write_all(b"\t")?;
-            Ok(false)
-        }
-        KeyEvent {
-            kind: KeyEventKind::Press,
-            code: KeyCode::Esc,
-            ..
-        } => {
-            writer.write_all(b"\x1b")?;
-            Ok(false)
-        }
-        KeyEvent {
-            kind: KeyEventKind::Press,
-            code: KeyCode::Up,
-            ..
-        } => {
-            writer.write_all(b"\x1b[A")?;
-            Ok(false)
-        }
-        KeyEvent {
-            kind: KeyEventKind::Press,
-            code: KeyCode::Down,
-            ..
-        } => {
-            writer.write_all(b"\x1b[B")?;
-            Ok(false)
-        }
-        KeyEvent {
-            kind: KeyEventKind::Press,
-            code: KeyCode::Right,
-            ..
-        } => {
-            writer.write_all(b"\x1b[C")?;
-            Ok(false)
-        }
-        KeyEvent {
-            kind: KeyEventKind::Press,
-            code: KeyCode::Left,
-            ..
-        } => {
-            writer.write_all(b"\x1b[D")?;
-            Ok(false)
-        }
-        KeyEvent {
-            kind: KeyEventKind::Press,
-            code: KeyCode::Home,
-            ..
-        } => {
-            writer.write_all(b"\x1b[H")?;
-            Ok(false)
-        }
-        KeyEvent {
-            kind: KeyEventKind::Press,
-            code: KeyCode::End,
-            ..
-        } => {
-            writer.write_all(b"\x1b[F")?;
-            Ok(false)
-        }
-        KeyEvent {
-            kind: KeyEventKind::Press,
-            code: KeyCode::Delete,
-            ..
-        } => {
-            writer.write_all(b"\x1b[3~")?;
-            Ok(false)
-        }
-        _ => Ok(false),
+        KeyCode::Char(ch) => writer.write_all(ch.encode_utf8(&mut [0; 4]).as_bytes())?,
+        KeyCode::Enter => writer.write_all(b"\r")?,
+        KeyCode::Backspace => writer.write_all(b"\x7f")?,
+        KeyCode::Tab => writer.write_all(b"\t")?,
+        KeyCode::Esc => writer.write_all(b"\x1b")?,
+        KeyCode::Up => writer.write_all(b"\x1b[A")?,
+        KeyCode::Down => writer.write_all(b"\x1b[B")?,
+        KeyCode::Right => writer.write_all(b"\x1b[C")?,
+        KeyCode::Left => writer.write_all(b"\x1b[D")?,
+        KeyCode::Home => writer.write_all(b"\x1b[H")?,
+        KeyCode::End => writer.write_all(b"\x1b[F")?,
+        KeyCode::PageUp => writer.write_all(b"\x1b[5~")?,
+        KeyCode::PageDown => writer.write_all(b"\x1b[6~")?,
+        KeyCode::Insert => writer.write_all(b"\x1b[2~")?,
+        KeyCode::Delete => writer.write_all(b"\x1b[3~")?,
+        KeyCode::F(number) => writer.write_all(function_key_sequence(number))?,
+        _ => {}
+    }
+    writer.flush()
+}
+
+fn control_byte(ch: char) -> u8 {
+    match ch.to_ascii_lowercase() {
+        'a'..='z' => ch.to_ascii_lowercase() as u8 - b'a' + 1,
+        '@' => 0,
+        '[' => 27,
+        '\\' => 28,
+        ']' => 29,
+        '^' => 30,
+        '_' => 31,
+        _ => ch as u8,
+    }
+}
+
+fn function_key_sequence(number: u8) -> &'static [u8] {
+    match number {
+        1 => b"\x1bOP",
+        2 => b"\x1bOQ",
+        3 => b"\x1bOR",
+        4 => b"\x1bOS",
+        5 => b"\x1b[15~",
+        6 => b"\x1b[17~",
+        7 => b"\x1b[18~",
+        8 => b"\x1b[19~",
+        9 => b"\x1b[20~",
+        10 => b"\x1b[21~",
+        11 => b"\x1b[23~",
+        12 => b"\x1b[24~",
+        _ => b"",
     }
 }
 
@@ -153,5 +138,19 @@ mod tests {
         let event = KeyEvent::new(KeyCode::F(8), KeyModifiers::NONE);
         assert!(is_voice_hotkey(&event, "F8"));
         assert!(!is_voice_hotkey(&event, "F9"));
+    }
+
+    #[test]
+    fn detects_shell_exit_hotkey() {
+        let event = KeyEvent::new(KeyCode::Char('\\'), KeyModifiers::CONTROL);
+        assert!(is_shell_exit(&event, "Ctrl+\\"));
+    }
+
+    #[test]
+    fn forwards_control_c_to_agent() {
+        let event = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
+        let mut buffer = Vec::new();
+        forward_key(event, &mut buffer).expect("forward");
+        assert_eq!(buffer, vec![3]);
     }
 }
