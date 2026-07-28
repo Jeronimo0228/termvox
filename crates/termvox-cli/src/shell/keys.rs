@@ -7,25 +7,59 @@ use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 /// Returns true when the key event matches a configured hotkey string (`F8`, `Ctrl+\\`, …).
 #[must_use]
 pub fn matches_hotkey(event: &KeyEvent, specification: &str) -> bool {
-    if event.kind != KeyEventKind::Press {
+    if !matches!(event.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
         return false;
     }
     let Some((expected_code, expected_modifiers)) = parse_hotkey(specification) else {
         return false;
     };
-    event.code == expected_code && event.modifiers == expected_modifiers
+    if event.code != expected_code {
+        return false;
+    }
+    if matches!(
+        expected_code,
+        KeyCode::F(_) | KeyCode::Esc | KeyCode::Enter | KeyCode::Tab | KeyCode::Backspace
+    ) {
+        return true;
+    }
+    if matches!(expected_code, KeyCode::Char(' ')) {
+        return event.modifiers.contains(KeyModifiers::CONTROL)
+            == expected_modifiers.contains(KeyModifiers::CONTROL);
+    }
+    event.modifiers == expected_modifiers
 }
 
-/// Returns true when the key event matches the configured shell voice hotkey.
+/// Returns true when the key event matches any configured shell voice hotkey.
 #[must_use]
-pub fn is_voice_hotkey(event: &KeyEvent, specification: &str) -> bool {
-    matches_hotkey(event, specification)
+pub fn is_voice_hotkey(event: &KeyEvent, specifications: &[String]) -> bool {
+    specifications
+        .iter()
+        .any(|spec| matches_hotkey(event, spec))
 }
 
 /// Returns true when the key event should leave the integrated shell wrapper.
 #[must_use]
 pub fn is_shell_exit(event: &KeyEvent, specification: &str) -> bool {
     matches_hotkey(event, specification)
+}
+
+/// Voice hotkeys used in shell mode, including Wayland-friendly fallbacks.
+#[must_use]
+pub fn shell_voice_hotkeys(config: &termvox_core::AppConfig) -> Vec<String> {
+    let mut hotkeys = vec![config.shell.hotkey.clone()];
+    for alt in &config.shell.alt_hotkeys {
+        if !hotkeys.iter().any(|existing| existing.eq_ignore_ascii_case(alt)) {
+            hotkeys.push(alt.clone());
+        }
+    }
+    if termvox_core::detect_environment().wayland {
+        for fallback in ["Ctrl+Space", "F9"] {
+            if !hotkeys.iter().any(|existing| existing.eq_ignore_ascii_case(fallback)) {
+                hotkeys.push(fallback.into());
+            }
+        }
+    }
+    hotkeys
 }
 
 fn parse_hotkey(specification: &str) -> Option<(KeyCode, KeyModifiers)> {
@@ -101,7 +135,7 @@ pub fn forward_key(event: KeyEvent, writer: &mut impl Write) -> std::io::Result<
 fn control_byte(ch: char) -> u8 {
     match ch.to_ascii_lowercase() {
         'a'..='z' => ch.to_ascii_lowercase() as u8 - b'a' + 1,
-        '@' => 0,
+        '@' | ' ' => 0,
         '[' => 27,
         '\\' => 28,
         ']' => 29,
@@ -136,8 +170,13 @@ mod tests {
     #[test]
     fn detects_f8_hotkey() {
         let event = KeyEvent::new(KeyCode::F(8), KeyModifiers::NONE);
-        assert!(is_voice_hotkey(&event, "F8"));
-        assert!(!is_voice_hotkey(&event, "F9"));
+        assert!(is_voice_hotkey(&event, &["F8".into()]));
+    }
+
+    #[test]
+    fn detects_ctrl_space_on_wayland_fallback() {
+        let event = KeyEvent::new(KeyCode::Char(' '), KeyModifiers::CONTROL);
+        assert!(matches_hotkey(&event, "Ctrl+Space"));
     }
 
     #[test]

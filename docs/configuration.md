@@ -178,6 +178,20 @@ Legacy `[cursor].trust_workspace` is still loaded and mapped to
 profile, display mode, warnings, and hints. See [Coding agents](agents.md) for
 per-agent notes and UI behavior.
 
+## Integrated shell (`termvox shell`)
+
+```toml
+[shell]
+hotkey = "F8"              # toggle voice capture
+alt_hotkeys = ["Ctrl+Space"]  # recommended on Wayland when F8 is captured
+exit_hotkey = "Ctrl+\\"    # leave TermVox wrapper (Ctrl+C goes to the agent)
+auto_submit = true         # press Enter after injecting transcribed text
+skip_confirmation = true   # inject without y/N prompt in shell mode
+```
+
+The mic bar is redrawn continuously so upstream TUIs (Cursor, OpenCode, etc.)
+cannot erase it. Use `exit_hotkey` to return to your normal shell.
+
 ## Plugins
 
 Each `[[plugins]]` entry requires a non-empty `id` and executable path.
