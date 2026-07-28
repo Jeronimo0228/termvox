@@ -241,6 +241,8 @@ pub struct ShellConfig {
     pub auto_submit: bool,
     /// Skip confirmation before injecting (overrides global confirmation when true).
     pub skip_confirmation: bool,
+    /// Leave the integrated shell without sending Ctrl+C to the agent (default Ctrl+\\).
+    pub exit_hotkey: String,
 }
 
 impl Default for ShellConfig {
@@ -249,6 +251,7 @@ impl Default for ShellConfig {
             hotkey: "F8".into(),
             auto_submit: true,
             skip_confirmation: true,
+            exit_hotkey: "Ctrl+\\".into(),
         }
     }
 }

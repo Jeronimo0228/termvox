@@ -8,9 +8,10 @@ use std::{
     sync::{
         Arc, Mutex,
         atomic::{AtomicBool, Ordering},
+        mpsc,
     },
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use anyhow::{Context, Result, bail};
@@ -30,6 +31,9 @@ use crate::runtime::{
 };
 
 use self::bar::{BarState, ShellBar};
+
+const BAR_REFRESH: Duration = Duration::from_millis(80);
+const IDLE_BAR_REFRESH: Duration = Duration::from_millis(350);
 
 /// Run the integrated shell for the selected or overridden agent.
 pub async fn run(
@@ -68,13 +72,14 @@ fn run_session(
 ) -> Result<()> {
     let rt = tokio::runtime::Handle::current();
     terminal::enable_raw_mode().context("enable raw mode")?;
-    let _restore = TerminalGuard;
+    let mut guard = TerminalGuard::new();
     let (cols, rows) = terminal_size()?;
     let agent_rows = rows.saturating_sub(1).max(1);
     setup_viewport(agent_rows, rows)?;
     let mut bar = ShellBar::new(
         agent_ui(agent),
         config.shell.hotkey.clone(),
+        config.shell.exit_hotkey.clone(),
         config.language.clone(),
         rows,
         cols,
@@ -106,7 +111,8 @@ fn run_session(
     let mut reader = pair.master.try_clone_reader().context("pty reader")?;
     let stop_reader = Arc::new(AtomicBool::new(false));
     let stop_copy = Arc::clone(&stop_reader);
-    let copy_agent = thread::spawn(move || copy_pty_output(&mut reader, &stop_copy));
+    let (pty_activity_tx, pty_activity_rx) = mpsc::channel();
+    let copy_agent = thread::spawn(move || copy_pty_output(&mut reader, &stop_copy, &pty_activity_tx));
 
     let child = Arc::new(Mutex::new(child));
     let (exit_tx, exit_rx) = mpsc::channel();
@@ -118,14 +124,14 @@ fn run_session(
 
     let mut recorder: Option<AudioRecorder> = None;
     let mut awaiting_confirm: Option<String> = None;
+    let mut anim_frame = 0_u8;
+    let mut last_bar_draw = Instant::now();
+    let mut running = true;
 
-    loop {
+    while running {
         if exit_rx.try_recv().is_ok() {
-            stop_reader.store(true, Ordering::Release);
-            let _ = copy_agent.join();
-            bar.set_state(BarState::Ready);
-            bar.draw()?;
-            break;
+            running = false;
+            continue;
         }
 
         if let Some(recorder_ref) = &recorder {
@@ -143,7 +149,22 @@ fn run_session(
             }
         }
 
-        if !event::poll(Duration::from_millis(40)).context("poll input")? {
+        if should_redraw_bar(
+            recorder.as_ref(),
+            &pty_activity_rx,
+            last_bar_draw,
+            awaiting_confirm.is_some(),
+        ) {
+            if recorder.is_some() {
+                anim_frame = anim_frame.wrapping_add(1);
+                let level = recorder.as_ref().map_or(0.0, AudioRecorder::input_level);
+                bar.set_recording_visuals(anim_frame, level);
+            }
+            bar.draw()?;
+            last_bar_draw = Instant::now();
+        }
+
+        if !event::poll(Duration::from_millis(25)).context("poll input")? {
             continue;
         }
 
@@ -166,6 +187,11 @@ fn run_session(
                     _ => {}
                 }
             }
+            Event::Key(key) if keys::is_shell_exit(&key, &config.shell.exit_hotkey) => {
+                bar.set_state(BarState::Exiting);
+                bar.draw()?;
+                running = false;
+            }
             Event::Key(key) if keys::is_voice_hotkey(&key, &config.shell.hotkey) => {
                 if awaiting_confirm.is_some() {
                     continue;
@@ -184,15 +210,14 @@ fn run_session(
                 } else {
                     recorder = Some(AudioRecorder::start(&config.audio)?);
                     bar.set_state(BarState::Recording);
+                    anim_frame = 0;
+                    bar.set_recording_visuals(0, 0.0);
                     bar.draw()?;
+                    last_bar_draw = Instant::now();
                 }
             }
             Event::Key(key) => {
-                if keys::forward_key(key, &mut writer)? {
-                    stop_reader.store(true, Ordering::Release);
-                    let _ = child.lock().expect("child mutex").kill();
-                    break;
-                }
+                keys::forward_key(key, &mut writer)?;
             }
             Event::Resize(cols, rows) => {
                 let agent_rows = rows.saturating_sub(1).max(1);
@@ -210,7 +235,28 @@ fn run_session(
         }
     }
 
+    stop_reader.store(true, Ordering::Release);
+    let _ = copy_agent.join();
+    let _ = child.lock().expect("child mutex").kill();
+    bar.set_state(BarState::Exiting);
+    bar.draw()?;
+    guard.restore()?;
     Ok(())
+}
+
+fn should_redraw_bar(
+    recorder: Option<&AudioRecorder>,
+    pty_activity_rx: &mpsc::Receiver<()>,
+    last_draw: Instant,
+    confirming: bool,
+) -> bool {
+    if pty_activity_rx.try_recv().is_ok() {
+        return true;
+    }
+    if recorder.is_some() || confirming {
+        return last_draw.elapsed() >= BAR_REFRESH;
+    }
+    last_draw.elapsed() >= IDLE_BAR_REFRESH
 }
 
 fn handle_finished_recording(
@@ -274,7 +320,11 @@ fn inject_prompt(
     Ok(())
 }
 
-fn copy_pty_output(reader: &mut dyn Read, stop: &AtomicBool) {
+fn copy_pty_output(
+    reader: &mut dyn io::Read,
+    stop: &AtomicBool,
+    activity: &mpsc::Sender<()>,
+) {
     let mut buffer = [0_u8; 8192];
     let mut stdout = io::stdout();
     while !stop.load(Ordering::Acquire) {
@@ -283,6 +333,7 @@ fn copy_pty_output(reader: &mut dyn Read, stop: &AtomicBool) {
             Ok(count) => {
                 let _ = stdout.write_all(&buffer[..count]);
                 let _ = stdout.flush();
+                let _ = activity.send(());
             }
             Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
             Err(_) => break,
@@ -308,21 +359,37 @@ fn resize_viewport(agent_rows: u16, total_rows: u16) -> Result<()> {
     setup_viewport(agent_rows, total_rows)
 }
 
-struct TerminalGuard;
+struct TerminalGuard {
+    active: bool,
+}
 
-impl Drop for TerminalGuard {
-    fn drop(&mut self) {
-        let _ = terminal::disable_raw_mode();
-        let _ = write!(io::stdout(), "\x1b[r\x1b[?25h");
-        let _ = io::stdout().flush();
+impl TerminalGuard {
+    fn new() -> Self {
+        Self { active: true }
+    }
+
+    fn restore(&mut self) -> Result<()> {
+        if !self.active {
+            return Ok(());
+        }
+        terminal::disable_raw_mode().context("disable raw mode")?;
+        let mut stdout = io::stdout();
+        write!(stdout, "\x1b[r\x1b[?25h\r\n")?;
+        stdout.flush()?;
+        self.active = false;
+        Ok(())
     }
 }
 
-use std::io::Read;
+impl Drop for TerminalGuard {
+    fn drop(&mut self) {
+        let _ = self.restore();
+    }
+}
 
 use crossterm::ExecutableCommand;
-use std::sync::mpsc;
 
+#[allow(dead_code)]
 const fn to_supported(agent: AgentKind) -> SupportedAgent {
     match agent {
         AgentKind::Codex => SupportedAgent::Codex,
@@ -332,5 +399,15 @@ const fn to_supported(agent: AgentKind) -> SupportedAgent {
         AgentKind::Aider => SupportedAgent::Aider,
         AgentKind::Amp => SupportedAgent::Amp,
         AgentKind::OpenCode => SupportedAgent::OpenCode,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recording_redraws_faster_than_idle() {
+        assert!(BAR_REFRESH < IDLE_BAR_REFRESH);
     }
 }

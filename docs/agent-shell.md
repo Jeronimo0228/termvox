@@ -73,6 +73,7 @@ Example layout:
 Mic states: idle → recording → transcribing → injected → idle.
 
 Default voice hotkey: **F8** (configurable via `[shell].hotkey`).
+Leave the wrapper with **`Ctrl+\\`** (`[shell].exit_hotkey`) without sending Ctrl+C to the agent.
 
 ## Authentication
 
