@@ -23,6 +23,8 @@ mod presets;
 mod runtime;
 mod session_ui;
 mod setup;
+mod shell;
+mod shim;
 mod telemetry;
 mod ui;
 

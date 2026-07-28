@@ -77,13 +77,32 @@ default embedded Whisper base model and optional sidecar models.
 
 ### `termvox init [--global] [--force] [--preset PRESET]`
 
-Creates a starter config. Presets: `cursor`, `codex`, `claude`, `gemini`, `rust-web`.
+Creates a starter config. Presets: `cursor`, `codex`, `claude`, `gemini`, `opencode`, `rust-web`.
 
 Example:
 
 ```bash
 termvox init --preset cursor --force
 ```
+
+### `termvox shell [--agent AGENT] [--] [ARGS...]`
+
+Launches the upstream agent CLI inside an integrated PTY with a persistent
+TermVox mic bar on the last terminal row. Works with Codex, Claude, Cursor,
+Gemini, Aider, Amp, and OpenCode. Default voice hotkey: **F8** (see `[shell].hotkey`).
+
+```bash
+termvox shell
+termvox shell --agent claude
+termvox shell --agent opencode
+termvox shell --agent cursor -- --model gpt-5
+```
+
+Exits before launch if the selected agent is not authenticated (see `termvox doctor`).
+
+### `termvox install-shim [--agent AGENT] [--force]`
+
+Installs `~/.local/bin/<agent>` as a wrapper that runs `termvox shell` (Unix).
 
 ### `termvox daemon start [--background]`
 

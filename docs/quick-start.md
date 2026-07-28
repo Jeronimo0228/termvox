@@ -14,6 +14,7 @@ agent:
 - `gemini` for Gemini CLI
 - `aider` for Aider
 - `amp` for Amp
+- `opencode` for OpenCode
 
 Local speech-to-text is embedded. It does not require `whisper-cli`, an API key,
 or a paid speech service.

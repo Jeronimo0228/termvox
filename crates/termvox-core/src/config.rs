@@ -27,6 +27,7 @@ pub enum AgentKind {
     Gemini,
     Aider,
     Amp,
+    OpenCode,
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -118,6 +119,7 @@ pub struct AppConfig {
     pub plugins: Vec<PluginConfig>,
     pub pipeline: PipelineConfig,
     pub daemon: DaemonConfig,
+    pub shell: ShellConfig,
     pub telemetry: TelemetryConfig,
     /// Apply host hints (Wayland toggle, RAM profile suggestions).
     pub auto_tune_from_environment: bool,
@@ -148,6 +150,7 @@ impl Default for AppConfig {
             plugins: Vec::new(),
             pipeline: PipelineConfig::default(),
             daemon: DaemonConfig::default(),
+            shell: ShellConfig::default(),
             telemetry: TelemetryConfig::default(),
             auto_tune_from_environment: true,
             cursor: None,
@@ -224,6 +227,27 @@ impl Default for DaemonConfig {
     fn default() -> Self {
         Self {
             hotkey: "ALT+SPACE".into(),
+            skip_confirmation: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ShellConfig {
+    /// Toggle voice capture inside `termvox shell` (function keys recommended).
+    pub hotkey: String,
+    /// Send Enter after injecting transcribed text into the agent TUI.
+    pub auto_submit: bool,
+    /// Skip confirmation before injecting (overrides global confirmation when true).
+    pub skip_confirmation: bool,
+}
+
+impl Default for ShellConfig {
+    fn default() -> Self {
+        Self {
+            hotkey: "F8".into(),
+            auto_submit: true,
             skip_confirmation: true,
         }
     }

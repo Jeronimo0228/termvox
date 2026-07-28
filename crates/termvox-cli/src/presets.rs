@@ -10,6 +10,7 @@ pub(crate) enum InitPreset {
     Codex,
     Claude,
     Gemini,
+    OpenCode,
     RustWeb,
 }
 
@@ -19,7 +20,7 @@ pub(crate) fn apply_preset(config: &mut AppConfig, preset: InitPreset) {
             config.performance_profile = PerformanceProfile::Fast;
             config.agent = AgentKind::Cursor;
             config.language = "es".into();
-            config.agents.cursor.display = Some(AgentDisplayMode::Companion);
+            config.agents.cursor.display = Some(AgentDisplayMode::Shell);
             config.agents.cursor.delivery = Some(PromptDelivery::Both);
             config.agents.cursor.paste_window_title = Some("Cursor".into());
             config.agents.cursor.trust_workspace = false;
@@ -38,6 +39,11 @@ pub(crate) fn apply_preset(config: &mut AppConfig, preset: InitPreset) {
             config.performance_profile = PerformanceProfile::Fast;
             config.agent = AgentKind::Gemini;
             config.agents.gemini.display = Some(AgentDisplayMode::Branded);
+        }
+        InitPreset::OpenCode => {
+            config.performance_profile = PerformanceProfile::Fast;
+            config.agent = AgentKind::OpenCode;
+            config.agents.opencode.display = Some(AgentDisplayMode::Shell);
         }
         InitPreset::RustWeb => {
             apply_preset(config, InitPreset::Cursor);
@@ -62,6 +68,7 @@ pub(crate) fn parse_preset(value: &str) -> Result<InitPreset> {
         "codex" => Ok(InitPreset::Codex),
         "claude" => Ok(InitPreset::Claude),
         "gemini" => Ok(InitPreset::Gemini),
+        "opencode" | "open-code" => Ok(InitPreset::OpenCode),
         "rust-web" | "rust_web" | "rustweb" => Ok(InitPreset::RustWeb),
         other => bail!("unknown preset: {other}"),
     }

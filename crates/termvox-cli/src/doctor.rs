@@ -42,11 +42,24 @@ pub(crate) async fn run(config: AppConfig, json: bool) -> Result<()> {
     );
     for agent in all_agents() {
         let info = agent.probe().await;
-        let detail = info.version.unwrap_or_else(|| info.executable.clone());
-        if info.installed {
-            println!("[ok] agent/{:<10} {}", info.id, detail);
-        } else {
+        let detail = info.version.clone().unwrap_or_else(|| info.executable.clone());
+        if !info.installed {
             println!("[--] agent/{:<10} not installed", info.id);
+            continue;
+        }
+        match info.auth.as_ref() {
+            Some(auth) if !auth.ok => {
+                println!("[!!] agent/{:<10} {} — {}", info.id, detail, auth.detail);
+                if let Some(login) = &auth.login_command {
+                    println!("       run: {login}");
+                }
+            }
+            Some(auth) => {
+                println!("[ok] agent/{:<10} {} ({})", info.id, detail, auth.detail);
+            }
+            None => {
+                println!("[ok] agent/{:<10} {}", info.id, detail);
+            }
         }
     }
     println!("\nSelected agent: {}", config.agent.id());

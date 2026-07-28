@@ -54,7 +54,7 @@ impl SessionUi {
                     self.ptt_label
                 );
             }
-            AgentDisplayMode::Branded | AgentDisplayMode::Companion => {
+            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => {
                 let version = agent_version
                     .map(|value| format!(" {value}"))
                     .unwrap_or_default();
@@ -76,7 +76,7 @@ impl SessionUi {
                     self.toggle_action()
                 );
             }
-            AgentDisplayMode::Branded | AgentDisplayMode::Companion => {
+            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => {
                 eprintln!("{}{}{}", self.theme.dim, self.theme.brand, self.theme.reset);
                 self.write_status(&format!(
                     "{}{} {shortcut} globally · Ctrl+C quits{}",
@@ -91,7 +91,7 @@ impl SessionUi {
     pub(crate) fn show_recording(&self) {
         match self.mode {
             AgentDisplayMode::Verbose => print!("Recording...\r"),
-            AgentDisplayMode::Branded | AgentDisplayMode::Companion => self.write_status(&format!(
+            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => self.write_status(&format!(
                 "{}{} Listening…{}",
                 self.theme.accent, self.theme.prompt_glyph, self.theme.reset
             )),
@@ -105,7 +105,7 @@ impl SessionUi {
                 print!("\rTranscribing...\r");
                 let _ = io::stdout().flush();
             }
-            AgentDisplayMode::Branded | AgentDisplayMode::Companion => self.write_status(&format!(
+            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => self.write_status(&format!(
                 "{}{} Transcribing…{}",
                 self.theme.accent, self.theme.prompt_glyph, self.theme.reset
             )),
@@ -115,7 +115,7 @@ impl SessionUi {
     pub(crate) fn show_no_speech(&self) {
         match self.mode {
             AgentDisplayMode::Verbose => println!("No speech detected."),
-            AgentDisplayMode::Branded | AgentDisplayMode::Companion => {
+            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => {
                 self.write_status(&format!(
                     "{}{} No speech detected{}",
                     self.theme.dim, self.theme.prompt_glyph, self.theme.reset
@@ -135,7 +135,7 @@ impl SessionUi {
                 print!("\rPartial: {preview}\r");
                 let _ = io::stdout().flush();
             }
-            AgentDisplayMode::Branded | AgentDisplayMode::Companion => self.write_status(&format!(
+            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => self.write_status(&format!(
                 "{}{} {preview}…{}",
                 self.theme.accent, self.theme.prompt_glyph, self.theme.reset
             )),
@@ -181,7 +181,7 @@ impl SessionUi {
                 }
                 eprintln!("{}{duration_ms} ms{}", self.theme.dim, self.theme.reset);
             }
-            AgentDisplayMode::Companion => {
+            AgentDisplayMode::Companion | AgentDisplayMode::Shell => {
                 println!();
                 println!(
                     "{}{}{} {prompt}",
@@ -197,7 +197,7 @@ impl SessionUi {
                     );
                 }
                 eprintln!(
-                    "{}{duration_ms} ms · copied and pasted into {}{}",
+                    "{}{duration_ms} ms · sent to {}{}",
                     self.theme.dim, self.theme.brand, self.theme.reset
                 );
             }
@@ -205,7 +205,10 @@ impl SessionUi {
     }
 
     pub(crate) fn show_delivery(&self, outcome: DeliveryOutcome, window_title: Option<&str>) {
-        if self.mode == AgentDisplayMode::Companion {
+        if matches!(
+            self.mode,
+            AgentDisplayMode::Companion | AgentDisplayMode::Shell
+        ) {
             let detail = match (outcome.clipboard, outcome.paste) {
                 (true, true) => match window_title {
                     Some(title) => format!("Copied and pasted into {title}"),
@@ -233,7 +236,10 @@ impl SessionUi {
     }
 
     pub(crate) fn show_clipboard_copied(&self) {
-        if self.mode == AgentDisplayMode::Companion {
+        if matches!(
+            self.mode,
+            AgentDisplayMode::Companion | AgentDisplayMode::Shell
+        ) {
             self.write_status(&format!(
                 "{}{} Copied to clipboard — paste with Ctrl+V{}",
                 self.theme.accent, self.theme.prompt_glyph, self.theme.reset
@@ -251,7 +257,7 @@ impl SessionUi {
     pub(crate) fn show_confirm_prompt(&self) -> String {
         match self.mode {
             AgentDisplayMode::Verbose => "Send to agent? [y/N] ".into(),
-            AgentDisplayMode::Branded | AgentDisplayMode::Companion => format!(
+            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => format!(
                 "{}{} Send? [y/N] {}",
                 self.theme.accent, self.theme.prompt_glyph, self.theme.reset
             ),
@@ -261,7 +267,7 @@ impl SessionUi {
     pub(crate) fn show_cancelled(&self) {
         match self.mode {
             AgentDisplayMode::Verbose => println!("Cancelled."),
-            AgentDisplayMode::Branded | AgentDisplayMode::Companion => {
+            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => {
                 self.write_status(&format!(
                     "{}{} Cancelled{}",
                     self.theme.dim, self.theme.prompt_glyph, self.theme.reset
@@ -276,7 +282,7 @@ impl SessionUi {
                 print!("\rHold {} to talk; q quits.\r", self.ptt_label);
                 let _ = io::stdout().flush();
             }
-            AgentDisplayMode::Branded | AgentDisplayMode::Companion => {
+            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => {
                 self.write_status(&self.idle_line());
             }
         }

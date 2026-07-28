@@ -36,6 +36,8 @@ pub enum AgentDisplayMode {
     Branded,
     /// Voice layer only — transcribe and emit a styled prompt for an external agent TUI.
     Companion,
+    /// Integrated mic bar wrapping the upstream agent TUI (`termvox shell`).
+    Shell,
     /// Legacy multi-line `TermVox` output.
     Verbose,
 }
@@ -46,6 +48,7 @@ impl AgentDisplayMode {
         match self {
             Self::Branded => "branded",
             Self::Companion => "companion",
+            Self::Shell => "shell",
             Self::Verbose => "verbose",
         }
     }
@@ -99,6 +102,7 @@ pub struct AgentsConfig {
     pub gemini: AgentProfile,
     pub aider: AgentProfile,
     pub amp: AgentProfile,
+    pub opencode: AgentProfile,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
@@ -116,6 +120,7 @@ impl AgentKind {
             Self::Gemini => "gemini",
             Self::Aider => "aider",
             Self::Amp => "amp",
+            Self::OpenCode => "opencode",
         }
     }
 
@@ -128,6 +133,7 @@ impl AgentKind {
             Self::Gemini => "gemini",
             Self::Aider => "aider",
             Self::Amp => "amp",
+            Self::OpenCode => "opencode",
         }
     }
 }
@@ -142,6 +148,7 @@ impl AgentsConfig {
             AgentKind::Gemini => &self.gemini,
             AgentKind::Aider => &self.aider,
             AgentKind::Amp => &self.amp,
+            AgentKind::OpenCode => &self.opencode,
         }
     }
 
@@ -217,8 +224,8 @@ impl AgentProfile {
 #[must_use]
 pub const fn default_display_mode(kind: AgentKind) -> AgentDisplayMode {
     match kind {
-        // Cursor users often keep the native `agent` TUI in another pane.
-        AgentKind::Cursor => AgentDisplayMode::Companion,
+        // Interactive TUIs benefit from integrated shell mode by default.
+        AgentKind::Cursor | AgentKind::OpenCode => AgentDisplayMode::Shell,
         _ => AgentDisplayMode::Branded,
     }
 }
@@ -282,6 +289,15 @@ pub const fn agent_ui(kind: AgentKind) -> AgentUiTheme {
             idle_placeholder: "Prompt Amp",
             tip: "Hold to talk; Amp receives stream-json output.",
         },
+        AgentKind::OpenCode => AgentUiTheme {
+            brand: "OpenCode",
+            prompt_glyph: "◆",
+            accent: "\x1b[38;5;45m",
+            dim: DIM,
+            reset: RESET,
+            idle_placeholder: "Plan, search, build anything",
+            tip: "Voice via TermVox — prompt injected into the OpenCode TUI.",
+        },
     }
 }
 
@@ -289,21 +305,27 @@ pub const fn agent_ui(kind: AgentKind) -> AgentUiTheme {
 pub fn agent_hints(kind: AgentKind) -> &'static [&'static str] {
     match kind {
         AgentKind::Cursor => &[
-            "Default display is companion — transcribe, copy, and auto-paste into the Cursor window.",
-            "Set agents.cursor.paste_window_title to match your Cursor window title if focus fails.",
-            "On Windows, auto-paste uses PowerShell SendKeys; on Linux use wtype or xdotool.",
-            "Set agents.cursor.trust_workspace = true for non-interactive workspace trust (-f).",
-            "On Wayland, prefer `termvox start --toggle` if hold-to-talk never transcribes.",
+            "Use `termvox shell` for an integrated mic bar inside the Cursor Agent TUI.",
+            "Default display is shell — voice injects directly into the running agent session.",
+            "Set agents.cursor.trust_workspace = true when Cursor requires workspace trust.",
+            "Legacy companion mode still supports auto-paste into a separate window.",
         ],
         AgentKind::Claude => {
-            &["Uses `claude -p` with stream-json; run `claude login` if authentication fails."]
+            &["Use `termvox shell --agent claude` for integrated voice in the Claude Code TUI."]
         }
-        AgentKind::Codex => &["Uses `codex exec --json`; ensure the Codex CLI is authenticated."],
+        AgentKind::Codex => {
+            &["Use `termvox shell --agent codex` for integrated voice in the Codex CLI TUI."]
+        }
         AgentKind::Gemini => {
-            &["Uses `gemini -p` with stream-json; complete Gemini CLI auth setup first."]
+            &["Use `termvox shell --agent gemini` for integrated voice in the Gemini CLI TUI."]
         }
-        AgentKind::Aider => &["Plain-text adapter without structured streaming or session resume."],
-        AgentKind::Amp => &["Uses `amp -x` with `--stream-json`."],
+        AgentKind::Aider => &["Use `termvox shell --agent aider` for integrated voice in Aider."],
+        AgentKind::Amp => &["Use `termvox shell --agent amp` for integrated voice in Amp."],
+        AgentKind::OpenCode => &[
+            "Use `termvox shell --agent opencode` for integrated voice in the OpenCode TUI.",
+            "Authenticate providers with `opencode auth login` before first use.",
+            "Inside the TUI you can also run `/connect` to add billing/API keys.",
+        ],
     }
 }
 
@@ -341,14 +363,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn cursor_defaults_to_companion_display() {
+    fn cursor_defaults_to_shell_display() {
         assert_eq!(
             default_display_mode(AgentKind::Cursor),
-            AgentDisplayMode::Companion
+            AgentDisplayMode::Shell
         );
         assert_eq!(
             AgentProfile::default().resolved_display(AgentKind::Cursor),
-            AgentDisplayMode::Companion
+            AgentDisplayMode::Shell
         );
     }
 
@@ -362,16 +384,20 @@ mod tests {
 
     #[test]
     fn cursor_companion_defaults_to_both_delivery() {
+        let mut profile = AgentProfile::default();
+        profile.display = Some(AgentDisplayMode::Companion);
         assert_eq!(
-            AgentProfile::default().resolved_delivery(AgentKind::Cursor),
+            profile.resolved_delivery(AgentKind::Cursor),
             PromptDelivery::Both
         );
     }
 
     #[test]
     fn cursor_companion_defaults_to_cursor_window_title() {
+        let mut profile = AgentProfile::default();
+        profile.display = Some(AgentDisplayMode::Companion);
         assert_eq!(
-            AgentProfile::default().resolved_paste_window_title(AgentKind::Cursor),
+            profile.resolved_paste_window_title(AgentKind::Cursor),
             Some("Cursor")
         );
     }

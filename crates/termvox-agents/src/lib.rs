@@ -1,7 +1,7 @@
 //! Safe, streaming subprocess adapters for supported coding-agent CLIs.
 #![allow(clippy::too_many_lines)]
 
-use std::{path::PathBuf, process::Stdio, time::Duration};
+use std::{path::{Path, PathBuf}, process::Stdio, time::Duration};
 
 use async_trait::async_trait;
 use termvox_core::{
@@ -15,7 +15,12 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 
+mod auth;
 mod parsers;
+mod shell;
+
+pub use auth::check_auth;
+pub use shell::InteractiveLaunch;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SupportedAgent {
@@ -25,16 +30,18 @@ pub enum SupportedAgent {
     Gemini,
     Aider,
     Amp,
+    OpenCode,
 }
 
 impl SupportedAgent {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 7] = [
         Self::Codex,
         Self::Claude,
         Self::Cursor,
         Self::Gemini,
         Self::Aider,
         Self::Amp,
+        Self::OpenCode,
     ];
 
     const fn id(self) -> &'static str {
@@ -45,6 +52,7 @@ impl SupportedAgent {
             Self::Gemini => "gemini",
             Self::Aider => "aider",
             Self::Amp => "amp",
+            Self::OpenCode => "opencode",
         }
     }
 
@@ -56,6 +64,7 @@ impl SupportedAgent {
             Self::Gemini => "gemini",
             Self::Aider => "aider",
             Self::Amp => "amp",
+            Self::OpenCode => "opencode",
         }
     }
 
@@ -114,8 +123,34 @@ impl CliAgent {
     }
 
     #[must_use]
+    pub fn opencode() -> Self {
+        Self::new(SupportedAgent::OpenCode)
+    }
+
+    #[must_use]
+    pub fn executable_path(&self) -> &Path {
+        &self.executable
+    }
+
+    #[must_use]
     pub fn with_executable(kind: SupportedAgent, executable: PathBuf) -> Self {
         Self { kind, executable }
+    }
+
+    /// Builds the argv for spawning the upstream interactive agent TUI.
+    #[must_use]
+    pub fn interactive_launch(
+        &self,
+        cwd: &Path,
+        trailing_args: &[String],
+        invocation: &termvox_core::AgentInvocationOptions,
+    ) -> InteractiveLaunch {
+        self.kind.interactive_launch(
+            self.executable.clone(),
+            cwd,
+            invocation,
+            trailing_args,
+        )
     }
 
     async fn command(&self, session: &AgentSession, request: &AgentRequest) -> Command {
@@ -172,6 +207,12 @@ impl CliAgent {
                     command.args(["--resume", &id]);
                 }
             }
+            SupportedAgent::OpenCode => {
+                command.args(["run", &request.prompt, "--format", "json"]);
+                if let Some(id) = remote_id {
+                    command.args(["--session", &id]);
+                }
+            }
         }
         // Permission elevation is deliberately not translated to undocumented flags.
         if request.permission_profile != PermissionProfile::Safe {
@@ -217,6 +258,18 @@ impl AgentAdapter for CliAgent {
         } else {
             None
         };
+        let installed = path.is_some();
+        let auth = if installed {
+            Some(
+                check_auth(
+                    self.kind,
+                    path.as_deref().unwrap_or(&self.executable),
+                )
+                .await,
+            )
+        } else {
+            None
+        };
         AgentInfo {
             id: self.id().to_owned(),
             executable: path
@@ -224,13 +277,14 @@ impl AgentAdapter for CliAgent {
                 .unwrap_or(&self.executable)
                 .display()
                 .to_string(),
-            installed: path.is_some(),
+            installed,
             version,
-            capabilities: if path.is_some() {
+            capabilities: if installed {
                 self.kind.capabilities()
             } else {
                 AgentCapabilities::default()
             },
+            auth,
         }
     }
 
@@ -369,6 +423,7 @@ fn parse_line(kind: SupportedAgent, line: &str) -> Option<AgentEvent> {
         SupportedAgent::Gemini => parsers::gemini::parse(line),
         SupportedAgent::Aider => parsers::aider::parse(line),
         SupportedAgent::Amp => parsers::amp::parse(line),
+        SupportedAgent::OpenCode => parsers::opencode::parse(line),
     }
 }
 

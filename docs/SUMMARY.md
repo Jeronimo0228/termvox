@@ -3,6 +3,7 @@
 - [Quick start](quick-start.md)
 - [Installation](installation.md)
 - [Coding agents](agents.md)
+- [Agent shell](agent-shell.md)
 - [Speech engines](speech-engines.md)
 - [Configuration](configuration.md)
 - [Performance](performance.md)

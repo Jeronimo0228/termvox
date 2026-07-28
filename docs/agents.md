@@ -14,6 +14,7 @@ output where available.
 | Gemini CLI | `gemini` | `gemini` | Built-in adapter |
 | Aider | `aider` | `aider` | Built-in text adapter |
 | Amp | `amp` | `amp` | Built-in adapter |
+| OpenCode | `opencode` | `opencode` | Built-in adapter |
 
 ## Selecting an agent
 
@@ -81,8 +82,31 @@ and agent-specific hints.
 - **Gemini CLI:** `gemini -p PROMPT --output-format stream-json`
 - **Aider:** `aider --message PROMPT`
 - **Amp:** `amp -x PROMPT --stream-json`
+- **OpenCode:** `opencode run PROMPT --format json [--session ID]`
 
 Resume arguments are added automatically when a remote session ID is known.
+
+For interactive TUI use, prefer `termvox shell --agent opencode` (or any other
+agent). Shell mode launches the upstream binary without one-shot flags.
+
+## Authentication
+
+TermVox probes upstream auth non-interactively (environment variables, credential
+files, and short-lived CLI checks). Results appear in `termvox doctor` and block
+`termvox start` / `termvox shell` when auth is required but missing.
+
+| Agent | Typical signal | Suggested fix |
+| --- | --- | --- |
+| OpenCode | No `~/.local/share/opencode/auth.json` or API keys | `opencode auth login` |
+| Claude | No credentials file or `ANTHROPIC_API_KEY` | `claude login` |
+| Codex | No auth file or `OPENAI_API_KEY` | `codex login` |
+| Gemini | No auth file or API key env | `gemini auth login` |
+| Aider | No LLM API key in environment | `export OPENAI_API_KEY=...` |
+| Cursor | Uses Cursor account (unknown if absent) | Sign in via Cursor IDE |
+| Amp | Depends on Amp account setup | Configure Amp credentials |
+
+Companion mode does not run auth preflight because the agent subprocess is not
+spawned by TermVox.
 
 ## Common agent-specific issues
 
@@ -92,6 +116,7 @@ Resume arguments are added automatically when a remote session ID is known.
 | Claude | Not authenticated | Run `claude login` in the same environment |
 | Codex | Not authenticated | Complete Codex CLI login first |
 | Gemini | Not authenticated | Complete Gemini CLI auth setup first |
+| OpenCode | Not authenticated | Run `opencode auth login` first |
 | Any on Wayland | Push-to-talk never transcribes | Use `termvox start --toggle` |
 
 ## Compatibility caveats
