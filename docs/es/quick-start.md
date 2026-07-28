@@ -66,8 +66,8 @@ privacidad, retención y costos del proveedor.
 
 ## Uso
 
-Selecciona `agent = "codex"`, `"claude"`, `"cursor"`, `"gemini"`, `"aider"` o
-`"amp"` en `termvox.toml` y ejecuta:
+Selecciona `agent = "codex"`, `"claude"`, `"cursor"`, `"gemini"`, `"aider"`,
+`"amp"` o `"opencode"` en `termvox.toml` y ejecuta:
 
 ```bash
 termvox config validate

@@ -451,6 +451,7 @@ impl AgentAdapter for PluginAgentAdapter {
                         streaming: manifest.capabilities.streaming,
                         resume: manifest.capabilities.resume,
                     },
+                    auth: None,
                 }
             }
             Err(_) => AgentInfo {
@@ -459,6 +460,7 @@ impl AgentAdapter for PluginAgentAdapter {
                 installed: false,
                 version: None,
                 capabilities: AgentCapabilities::default(),
+                auth: None,
             },
         }
     }

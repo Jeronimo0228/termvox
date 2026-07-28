@@ -53,7 +53,10 @@ pub(crate) fn init_config(
             "vosk" => SpeechEngineKind::Vosk,
             _ => SpeechEngineKind::WhisperCpp,
         };
-        let agent = prompt_default("Agent (codex/claude/cursor/gemini/aider/amp)", "codex")?;
+        let agent = prompt_default(
+            "Agent (codex/claude/cursor/gemini/aider/amp/opencode)",
+            "codex",
+        )?;
         config.agent = parse_agent(&agent)?;
         if config.agent == AgentKind::Cursor
             && confirm_yes_no("Trust this project directory for Cursor CLI non-interactive runs?")?
@@ -94,6 +97,7 @@ fn parse_agent(value: &str) -> Result<AgentKind> {
         "gemini" => Ok(AgentKind::Gemini),
         "aider" => Ok(AgentKind::Aider),
         "amp" => Ok(AgentKind::Amp),
+        "opencode" | "open-code" => Ok(AgentKind::OpenCode),
         _ => bail!("unsupported agent: {value}"),
     }
 }

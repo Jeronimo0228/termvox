@@ -91,7 +91,7 @@ The same maintained example is available at
 | --- | --- | --- |
 | `performance_profile` | `fast`, `balanced`, `accurate`, or `custom` | `fast` |
 | `speech_engine` | `whisper` (`whispercpp` legacy alias), `openai`, `parakeet`, or `vosk` | `whisper` |
-| `agent` | `codex`, `claude`, `cursor`, `gemini`, `aider`, or `amp` | `codex` |
+| `agent` | `codex`, `claude`, `cursor`, `gemini`, `aider`, `amp`, or `opencode` | `codex` |
 | `push_to_talk` | `SPACE`, `ENTER`, `TAB`, `F1`–`F24`, or one character | `SPACE` |
 | `language` | Passed to the speech engine | `es` |
 | `auto_send` | When false, confirmation is required | `false` |

@@ -44,6 +44,7 @@ termvox-core = { version = "0.1.0-alpha.1", path = "../termvox-core" }
 termvox-plugin-sdk = { version = "0.1.0-alpha.1", path = "../termvox-plugin-sdk" }
 termvox-speech = { version = "0.1.0-alpha.1", path = "../termvox-speech", default-features = false }
 termvox-hotkeys = { version = "0.1.0-alpha.1", path = "../termvox-hotkeys" }
+portable-pty = "0.9.0"
 
 [lints]
 workspace = true

@@ -6,7 +6,7 @@ use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-use crate::{AgentEventStream, AgentInvocationOptions, PermissionProfile, Result, RuntimeLimits};
+use crate::{AgentAuthStatus, AgentEventStream, AgentInvocationOptions, PermissionProfile, Result, RuntimeLimits};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AgentInfo {
@@ -15,6 +15,8 @@ pub struct AgentInfo {
     pub installed: bool,
     pub version: Option<String>,
     pub capabilities: AgentCapabilities,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth: Option<AgentAuthStatus>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]

@@ -10,7 +10,7 @@ use crossterm::{
 use termvox_agents::{CliAgent, SupportedAgent};
 use termvox_audio::{AudioRecorder, trim_with_vad_hangover};
 use termvox_core::{
-    AgentAdapter, AgentDisplayMode, AgentKind, AgentRequest, AgentSession, AppConfig,
+    AgentAdapter, AgentDisplayMode, AgentInfo, AgentKind, AgentRequest, AgentSession, AppConfig,
     PromptPipeline, SpeechEngine, SpeechEngineKind, TranscriptionOptions, assess_prompt,
     detect_environment, whisper_initial_prompt,
 };
@@ -79,6 +79,9 @@ pub(crate) async fn start(
             "{} is not installed; install it or select another agent",
             info.id
         );
+    }
+    if !is_companion_mode(&config) {
+        ensure_agent_authenticated(&info)?;
     }
     let speech = ensure_speech_engine(&config).await?;
     schedule_prewarm(Arc::clone(&speech), &config.whisper);
@@ -434,6 +437,24 @@ fn is_companion_mode(config: &AppConfig) -> bool {
         == AgentDisplayMode::Companion
 }
 
+/// Fail fast when the selected agent requires upstream auth that is not configured.
+pub(crate) fn ensure_agent_authenticated(info: &AgentInfo) -> Result<()> {
+    if let Some(auth) = &info.auth {
+        if !auth.ok {
+            let login = auth
+                .login_command
+                .as_deref()
+                .unwrap_or("see upstream agent auth docs");
+            bail!(
+                "{} is not authenticated ({}). Run `{login}` first.",
+                info.id,
+                auth.detail
+            );
+        }
+    }
+    Ok(())
+}
+
 pub(crate) async fn record(config: AppConfig, action: RecordAction) -> Result<()> {
     let marker = record_marker();
     match action {
@@ -570,7 +591,7 @@ fn selected_agent(config: &AppConfig) -> Result<Arc<dyn AgentAdapter>> {
     Ok(configured_cli_agent(config.agent, config))
 }
 
-fn configured_cli_agent(kind: AgentKind, config: &AppConfig) -> Arc<dyn AgentAdapter> {
+pub(crate) fn configured_cli_agent_kind(kind: AgentKind, config: &AppConfig) -> CliAgent {
     let supported = match kind {
         AgentKind::Codex => SupportedAgent::Codex,
         AgentKind::Claude => SupportedAgent::Claude,
@@ -578,14 +599,16 @@ fn configured_cli_agent(kind: AgentKind, config: &AppConfig) -> Arc<dyn AgentAda
         AgentKind::Gemini => SupportedAgent::Gemini,
         AgentKind::Aider => SupportedAgent::Aider,
         AgentKind::Amp => SupportedAgent::Amp,
+        AgentKind::OpenCode => SupportedAgent::OpenCode,
     };
-    Arc::new(CliAgent::with_executable(
-        supported,
-        config.agents.resolve_executable(kind),
-    ))
+    CliAgent::with_executable(supported, config.agents.resolve_executable(kind))
 }
 
-pub(crate) fn all_agents() -> [CliAgent; 6] {
+pub(crate) fn configured_cli_agent(kind: AgentKind, config: &AppConfig) -> Arc<dyn AgentAdapter> {
+    Arc::new(configured_cli_agent_kind(kind, config))
+}
+
+pub(crate) fn all_agents() -> [CliAgent; 7] {
     [
         CliAgent::codex(),
         CliAgent::claude(),
@@ -593,10 +616,11 @@ pub(crate) fn all_agents() -> [CliAgent; 6] {
         CliAgent::gemini(),
         CliAgent::aider(),
         CliAgent::amp(),
+        CliAgent::opencode(),
     ]
 }
 
-fn schedule_prewarm(speech: Arc<dyn SpeechEngine>, whisper: &termvox_core::WhisperConfig) {
+pub(crate) fn schedule_prewarm(speech: Arc<dyn SpeechEngine>, whisper: &termvox_core::WhisperConfig) {
     if whisper.prewarm_on_start {
         tokio::spawn(async move {
             let _ = speech.prewarm().await;
@@ -613,4 +637,43 @@ fn record_marker() -> PathBuf {
     dirs::runtime_dir()
         .unwrap_or_else(std::env::temp_dir)
         .join("termvox-recording")
+}
+
+pub(crate) struct PreparedUtterance {
+    pub transcript: String,
+    pub prompt: String,
+    pub duration_ms: u64,
+    pub risk_matches: Vec<String>,
+    pub requires_confirmation: bool,
+}
+
+pub(crate) async fn prepare_utterance(
+    config: &AppConfig,
+    audio: termvox_core::AudioBuffer,
+    speech: &dyn SpeechEngine,
+    on_partial: Option<Arc<dyn Fn(String) + Send + Sync>>,
+    cancel: CancellationToken,
+) -> Result<Option<PreparedUtterance>> {
+    let audio = trim_with_vad_hangover(
+        &audio,
+        config.audio.vad_threshold_db,
+        config.audio.vad_silence_ms,
+    );
+    if audio.samples.is_empty() {
+        return Ok(None);
+    }
+    let mut options = transcription_options(config);
+    options.on_partial = on_partial;
+    let transcript = speech
+        .transcribe(audio, &options, cancel.child_token())
+        .await?;
+    let prompt = PromptPipeline::from_config(&config.pipeline).process(&transcript.text);
+    let risk = assess_prompt(&prompt);
+    Ok(Some(PreparedUtterance {
+        transcript: transcript.text,
+        prompt,
+        duration_ms: transcript.duration_ms,
+        risk_matches: risk.matches,
+        requires_confirmation: config.confirmation || risk.requires_confirmation || !config.auto_send,
+    }))
 }

@@ -23,7 +23,7 @@ unsupported.
 ## Coding agents
 
 Built-in adapters exist for Codex CLI, Claude Code, Cursor CLI, Gemini CLI,
-Aider, and Amp. They depend on upstream arguments and output shapes that may
+Aider, Amp, and OpenCode. They depend on upstream arguments and output shapes that may
 change without TermVox. The repository does not pin or certify agent CLI
 versions. Aider uses plain text and does not support session resume in the
 current adapter. See [Coding agents](agents.md).

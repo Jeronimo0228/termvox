@@ -10,7 +10,10 @@ the current compatibility matrix.
 - CPAL microphone capture, filtered resampling, and energy-based trimming
 - Whisper.cpp and OpenAI transcription adapters
 - Generic Parakeet and Vosk sidecar adapters
-- Codex, Claude, Cursor, Gemini, Aider, and Amp CLI adapters
+- Codex, Claude, Cursor, Gemini, Aider, Amp, and OpenCode CLI adapters
+- **`termvox shell`:** integrated Agent Shell for all seven built-in agents —
+  upstream TUI in a PTY plus a persistent TermVox mic bar and stdin injection
+- Non-interactive upstream auth probes (`termvox doctor`, shell/start preflight)
 - Explicit prompt transformations and risk-triggered confirmation
 - Layered configuration, diagnostics, audio test, and verified model download
 - Streaming agent events with runtime limits and session reuse
@@ -25,6 +28,7 @@ These components exist in source but remain subject to alpha-level change.
 - More reliable terminal and platform trigger integration
 - Streaming transcription and richer event rendering
 - Adapter-specific parsers and contract tests for upstream CLI versions
+- Windows support for `termvox install-shim`
 
 ## Extensibility targets
 

@@ -5,9 +5,9 @@ utterance, transcribes it, shows the resulting prompt, and sends it to a
 selected agent only after the configured confirmation policy allows it.
 
 > **Project status:** TermVox is pre-release software. The source currently
-> includes adapters for Codex, Claude, Cursor, Gemini, Aider, and Amp; embedded
-> local Whisper and optional OpenAI transcription; and sidecar contracts for
-> Parakeet and Vosk. The default speech path is free, local, and needs no API
+> includes adapters for Codex, Claude, Cursor, Gemini, Aider, Amp, and OpenCode;
+> embedded local Whisper and optional OpenAI transcription; and sidecar contracts
+> for Parakeet and Vosk. The default speech path is free, local, and needs no API
 > key. Coding-agent availability still depends on separately installed upstream
 > tools. No release artifacts or signatures are claimed to be available.
 
@@ -36,6 +36,17 @@ and stores the multilingual base model outside the repository; interactive
 commands offer this download when it is missing. For remote transcription,
 explicitly set `speech_engine = "openai"` and export `OPENAI_API_KEY`.
 
+### Integrated agent shell (recommended for TUIs)
+
+Launch any supported agent CLI with a persistent mic bar — no second terminal,
+no paste workflow:
+
+```bash
+termvox shell                    # agent from termvox.toml
+termvox shell --agent opencode   # OpenCode TUI + voice (F8)
+termvox install-shim --agent claude --force   # Unix: wrap `claude`
+```
+
 While `termvox start` is focused, hold `Space` to record, release it to
 transcribe, review the prompt, and answer the confirmation question. Press `q`
 or `Ctrl+C` to exit.
@@ -44,20 +55,22 @@ or `Ctrl+C` to exit.
 
 | Integration | Status in the current source |
 | --- | --- |
-| Codex, Claude, Cursor, Gemini, Aider, Amp | Built-in CLI adapters |
+| Codex, Claude, Cursor, Gemini, Aider, Amp, OpenCode | Built-in CLI adapters |
+| `termvox shell` (PTY + mic bar) | All seven built-in agents |
 | Embedded Whisper, OpenAI speech-to-text | Built-in speech adapters; Whisper is the free local default |
 | Parakeet, Vosk | Generic local sidecar adapters |
 | Third-party JSON-RPC plugins | Explicit configuration plus inspect/test lifecycle |
 
 An adapter in source does not guarantee every upstream version works. Run
-`termvox doctor` after upgrading a tool, and see the
-[compatibility notes](docs/compatibility.md).
+`termvox doctor` after upgrading a tool — it reports install status and upstream
+auth for each agent. See the [compatibility notes](docs/compatibility.md).
 
 ## Documentation
 
 - [Quick start](docs/quick-start.md) · [Inicio rápido en español](docs/es/quick-start.md)
+- [Agent shell](docs/agent-shell.md) · [Coding agents](docs/agents.md)
 - [Installation](docs/installation.md)
-- [Coding agents](docs/agents.md) · [Speech engines](docs/speech-engines.md)
+- [Speech engines](docs/speech-engines.md)
 - [Configuration](docs/configuration.md) · [CLI reference](docs/cli-reference.md)
 - [Privacy and security](docs/privacy-security.md)
 - [Architecture](docs/architecture.md) · [Plugin protocol](docs/plugin-system.md)

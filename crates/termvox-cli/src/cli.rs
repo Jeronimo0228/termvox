@@ -4,7 +4,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
 
-use crate::{bench, commands, daemon, doctor, runtime, setup};
+use crate::{bench, commands, daemon, doctor, runtime, setup, shell, shim};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -84,6 +84,18 @@ enum Commands {
     Manpage {
         #[arg(long)]
         output: Option<PathBuf>,
+    },
+    Shell {
+        #[arg(long, value_name = "AGENT")]
+        agent: Option<String>,
+        #[arg(last = true, allow_hyphen_values = true)]
+        agent_args: Vec<String>,
+    },
+    InstallShim {
+        #[arg(long, value_name = "AGENT")]
+        agent: Option<String>,
+        #[arg(long)]
+        force: bool,
     },
 }
 
@@ -222,6 +234,22 @@ pub(crate) async fn run() -> Result<()> {
         }
         Commands::Completions { shell } => commands::completions(shell),
         Commands::Manpage { output } => commands::manpage(output.as_deref())?,
+        Commands::Shell { agent, agent_args } => {
+            let config = setup::load_config(cli.config.as_deref())?;
+            let kind = match agent {
+                Some(value) => shim::parse_agent_kind(&value)?,
+                None => config.agent,
+            };
+            shell::run(config, kind, agent_args).await?;
+        }
+        Commands::InstallShim { agent, force } => {
+            let config = setup::load_config(cli.config.as_deref())?;
+            let kind = match agent {
+                Some(value) => shim::parse_agent_kind(&value)?,
+                None => config.agent,
+            };
+            shim::install(kind, force)?;
+        }
     }
     Ok(())
 }

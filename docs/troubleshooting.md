@@ -69,7 +69,26 @@ agent --version
 gemini --version
 aider --version
 amp --version
+opencode --version
 ```
+
+## Agent is not authenticated
+
+Run `termvox doctor` and look for `[!!]` lines under `agent/...`. TermVox
+suggests the upstream login command when it can detect missing credentials.
+
+Common fixes:
+
+```bash
+opencode auth login
+claude login
+codex login
+gemini auth login
+export OPENAI_API_KEY=...   # Aider and some OpenCode providers
+```
+
+`termvox shell` and `termvox start` (except companion mode) fail fast with the
+same message instead of launching a broken agent session.
 
 TermVox currently has no configuration key for a custom built-in agent
 executable path. Ensure the command is on `PATH`. If an installed agent starts
