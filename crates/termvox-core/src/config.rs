@@ -243,6 +243,8 @@ pub struct ShellConfig {
     pub skip_confirmation: bool,
     /// Leave the integrated shell without sending Ctrl+C to the agent (default Ctrl+\\).
     pub exit_hotkey: String,
+    /// Additional voice hotkeys (for example `Ctrl+Space` on Wayland).
+    pub alt_hotkeys: Vec<String>,
 }
 
 impl Default for ShellConfig {
@@ -252,6 +254,7 @@ impl Default for ShellConfig {
             auto_submit: true,
             skip_confirmation: true,
             exit_hotkey: "Ctrl+\\".into(),
+            alt_hotkeys: vec!["Ctrl+Space".into()],
         }
     }
 }

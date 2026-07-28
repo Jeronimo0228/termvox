@@ -2,6 +2,7 @@
 
 mod bar;
 mod keys;
+mod pty_filter;
 
 use std::{
     io::{self, Write},
@@ -73,12 +74,14 @@ fn run_session(
     let rt = tokio::runtime::Handle::current();
     terminal::enable_raw_mode().context("enable raw mode")?;
     let mut guard = TerminalGuard::new();
+    pty_filter::reclaim_host_keyboard(&mut io::stdout()).context("reclaim host keyboard")?;
+    let voice_hotkeys = keys::shell_voice_hotkeys(config);
     let (cols, rows) = terminal_size()?;
     let agent_rows = rows.saturating_sub(1).max(1);
     setup_viewport(agent_rows, rows)?;
     let mut bar = ShellBar::new(
         agent_ui(agent),
-        config.shell.hotkey.clone(),
+        voice_hotkeys.clone(),
         config.shell.exit_hotkey.clone(),
         config.language.clone(),
         rows,
@@ -122,6 +125,8 @@ fn run_session(
         let _ = exit_tx.send(status);
     });
 
+    let global_hotkey = register_shell_hotkey(&voice_hotkeys);
+
     let mut recorder: Option<AudioRecorder> = None;
     let mut awaiting_confirm: Option<String> = None;
     let mut anim_frame = 0_u8;
@@ -164,6 +169,23 @@ fn run_session(
             last_bar_draw = Instant::now();
         }
 
+        if let Some(registration) = &global_hotkey {
+            if let Some(termvox_hotkeys::TriggerState::Pressed) = registration.poll() {
+                toggle_voice(
+                    config,
+                    speech,
+                    &rt,
+                    &voice_hotkeys,
+                    &mut recorder,
+                    &mut bar,
+                    &mut writer,
+                    &mut awaiting_confirm,
+                    &mut anim_frame,
+                    &mut last_bar_draw,
+                )?;
+            }
+        }
+
         if !event::poll(Duration::from_millis(25)).context("poll input")? {
             continue;
         }
@@ -192,31 +214,29 @@ fn run_session(
                 bar.draw()?;
                 running = false;
             }
-            Event::Key(key) if keys::is_voice_hotkey(&key, &config.shell.hotkey) => {
+            Event::Key(key) if keys::is_voice_hotkey(&key, &voice_hotkeys) => {
                 if awaiting_confirm.is_some() {
                     continue;
                 }
-                if let Some(recorder_handle) = recorder.take() {
-                    let audio = rt.block_on(recorder_handle.stop())?;
-                    handle_finished_recording(
-                        config,
-                        speech,
-                        &rt,
-                        &mut bar,
-                        &mut writer,
-                        &mut awaiting_confirm,
-                        audio,
-                    )?;
-                } else {
-                    recorder = Some(AudioRecorder::start(&config.audio)?);
-                    bar.set_state(BarState::Recording);
-                    anim_frame = 0;
-                    bar.set_recording_visuals(0, 0.0);
-                    bar.draw()?;
-                    last_bar_draw = Instant::now();
-                }
+                toggle_voice(
+                    config,
+                    speech,
+                    &rt,
+                    &voice_hotkeys,
+                    &mut recorder,
+                    &mut bar,
+                    &mut writer,
+                    &mut awaiting_confirm,
+                    &mut anim_frame,
+                    &mut last_bar_draw,
+                )?;
             }
             Event::Key(key) => {
+                if keys::is_voice_hotkey(&key, &voice_hotkeys)
+                    || keys::is_shell_exit(&key, &config.shell.exit_hotkey)
+                {
+                    continue;
+                }
                 keys::forward_key(key, &mut writer)?;
             }
             Event::Resize(cols, rows) => {
@@ -257,6 +277,49 @@ fn should_redraw_bar(
         return last_draw.elapsed() >= BAR_REFRESH;
     }
     last_draw.elapsed() >= IDLE_BAR_REFRESH
+}
+
+fn toggle_voice(
+    config: &AppConfig,
+    speech: &Arc<dyn SpeechEngine>,
+    rt: &tokio::runtime::Handle,
+    _voice_hotkeys: &[String],
+    recorder: &mut Option<AudioRecorder>,
+    bar: &mut ShellBar,
+    writer: &mut impl Write,
+    awaiting_confirm: &mut Option<String>,
+    anim_frame: &mut u8,
+    last_bar_draw: &mut Instant,
+) -> Result<()> {
+    if let Some(recorder_handle) = recorder.take() {
+        let audio = rt.block_on(recorder_handle.stop())?;
+        handle_finished_recording(
+            config,
+            speech,
+            rt,
+            bar,
+            writer,
+            awaiting_confirm,
+            audio,
+        )?;
+    } else {
+        *recorder = Some(AudioRecorder::start(&config.audio)?);
+        bar.set_state(BarState::Recording);
+        *anim_frame = 0;
+        bar.set_recording_visuals(0, 0.0);
+        bar.draw()?;
+        *last_bar_draw = Instant::now();
+    }
+    Ok(())
+}
+
+fn register_shell_hotkey(voice_hotkeys: &[String]) -> Option<termvox_hotkeys::HotkeyRegistration> {
+    for hotkey in voice_hotkeys {
+        if let Ok(registration) = termvox_hotkeys::HotkeyRegistration::register(hotkey) {
+            return Some(registration);
+        }
+    }
+    None
 }
 
 fn handle_finished_recording(
@@ -331,8 +394,12 @@ fn copy_pty_output(
         match reader.read(&mut buffer) {
             Ok(0) => break,
             Ok(count) => {
-                let _ = stdout.write_all(&buffer[..count]);
-                let _ = stdout.flush();
+                let filtered = pty_filter::filter_agent_output(&buffer[..count]);
+                if !filtered.is_empty() {
+                    let _ = stdout.write_all(&filtered);
+                    let _ = stdout.flush();
+                    let _ = pty_filter::reclaim_host_keyboard(&mut stdout);
+                }
                 let _ = activity.send(());
             }
             Err(error) if error.kind() == io::ErrorKind::Interrupted => {}

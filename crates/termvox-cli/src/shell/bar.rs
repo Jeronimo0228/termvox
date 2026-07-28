@@ -23,7 +23,7 @@ pub(super) enum BarState {
 
 pub(super) struct ShellBar {
     theme: AgentUiTheme,
-    hotkey: String,
+    hotkeys: Vec<String>,
     exit_hotkey: String,
     language: String,
     state: BarState,
@@ -36,7 +36,7 @@ pub(super) struct ShellBar {
 impl ShellBar {
     pub(super) fn new(
         theme: AgentUiTheme,
-        hotkey: String,
+        hotkeys: Vec<String>,
         exit_hotkey: String,
         language: String,
         row: u16,
@@ -44,7 +44,7 @@ impl ShellBar {
     ) -> Self {
         Self {
             theme,
-            hotkey,
+            hotkeys,
             exit_hotkey,
             language,
             state: BarState::Ready,
@@ -70,15 +70,21 @@ impl ShellBar {
     }
 
     pub(super) fn draw(&self) -> io::Result<()> {
+        let hotkey_hint = self
+            .hotkeys
+            .iter()
+            .take(2)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("/");
         let message = match &self.state {
             BarState::Ready => format!(
-                "🎤 TermVox · {} · {} · {} · listo · salir {}",
-                self.theme.brand, self.hotkey, self.language, self.exit_hotkey
+                "🎤 TermVox · {} · {} · {} · listo · voz {hotkey_hint} · salir {}",
+                self.theme.brand, self.language, self.hotkeys.first().cloned().unwrap_or_else(|| "F8".into()), self.exit_hotkey
             ),
             BarState::Recording => format!(
-                "🔴 {} Escuchando… {} · {} para terminar",
+                "🔴 {} Escuchando… {hotkey_hint} · {} para terminar",
                 level_meter(self.input_level, self.recording_frame),
-                self.hotkey,
                 pulse_dots(self.recording_frame)
             ),
             BarState::Transcribing => format!(
