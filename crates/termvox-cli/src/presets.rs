@@ -23,7 +23,7 @@ pub(crate) fn apply_preset(config: &mut AppConfig, preset: InitPreset) {
             config.agents.cursor.display = Some(AgentDisplayMode::Shell);
             config.agents.cursor.delivery = Some(PromptDelivery::Both);
             config.agents.cursor.paste_window_title = Some("Cursor".into());
-            config.agents.cursor.trust_workspace = false;
+            config.agents.cursor.trust_workspace = true;
         }
         InitPreset::Codex => {
             config.performance_profile = PerformanceProfile::Fast;

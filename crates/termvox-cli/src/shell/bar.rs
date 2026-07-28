@@ -9,6 +9,8 @@ use crossterm::{
 };
 use termvox_core::AgentUiTheme;
 
+use super::messages;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum BarState {
     Ready,
@@ -19,6 +21,7 @@ pub(super) enum BarState {
     Injected(String),
     Error(String),
     Exiting,
+    Notice(String),
 }
 
 pub(super) struct ShellBar {
@@ -26,6 +29,7 @@ pub(super) struct ShellBar {
     hotkeys: Vec<String>,
     exit_hotkey: String,
     language: String,
+    session_hint: Option<String>,
     state: BarState,
     row: u16,
     cols: u16,
@@ -47,12 +51,17 @@ impl ShellBar {
             hotkeys,
             exit_hotkey,
             language,
+            session_hint: None,
             state: BarState::Ready,
             row,
             cols,
             recording_frame: 0,
             input_level: 0.0,
         }
+    }
+
+    pub(super) fn set_session_hint(&mut self, session_id: Option<String>) {
+        self.session_hint = session_id;
     }
 
     pub(super) fn set_size(&mut self, row: u16, cols: u16) {
@@ -69,6 +78,13 @@ impl ShellBar {
         self.input_level = input_level.clamp(0.0, 1.0);
     }
 
+    pub(super) fn needs_animation(&self) -> bool {
+        matches!(
+            self.state,
+            BarState::Recording | BarState::Transcribing | BarState::Partial(_)
+        )
+    }
+
     pub(super) fn draw(&self) -> io::Result<()> {
         let hotkey_hint = self
             .hotkeys
@@ -79,26 +95,59 @@ impl ShellBar {
             .join("/");
         let message = match &self.state {
             BarState::Ready => format!(
-                "🎤 TermVox · {} · {} · {} · listo · voz {hotkey_hint} · salir {}",
-                self.theme.brand, self.language, self.hotkeys.first().cloned().unwrap_or_else(|| "F8".into()), self.exit_hotkey
+                "{}{} TermVox · {} · {} · {} · {} {hotkey_hint} · {} {}{}",
+                self.theme.dim,
+                self.theme.prompt_glyph,
+                self.theme.brand,
+                messages::language_tag(&self.language),
+                messages::ready(&self.language, self.session_hint.as_deref()),
+                messages::voice_label(&self.language),
+                messages::exit_label(&self.language),
+                self.exit_hotkey,
+                self.theme.reset,
             ),
             BarState::Recording => format!(
-                "🔴 {} Escuchando… {hotkey_hint} · {} para terminar",
+                "{}{} {} {} · {hotkey_hint}{}",
+                self.theme.accent,
+                self.theme.prompt_glyph,
                 level_meter(self.input_level, self.recording_frame),
-                pulse_dots(self.recording_frame)
+                messages::recording(&self.language),
+                self.theme.reset,
             ),
             BarState::Transcribing => format!(
-                "⏳ Transcribiendo{}",
-                pulse_dots(self.recording_frame)
+                "{}{} {}{}{}",
+                self.theme.accent,
+                self.theme.prompt_glyph,
+                messages::transcribing(&self.language),
+                messages::transcribing_dots(self.recording_frame),
+                self.theme.reset
             ),
-            BarState::Partial(text) => truncate(format!("… {text}"), self.cols as usize),
-            BarState::Confirm(prompt) => truncate(
-                format!("¿Enviar? [y/N] {prompt}"),
+            BarState::Partial(text) => truncate(
+                format!(
+                    "{}{} {} {text}{}",
+                    self.theme.accent,
+                    self.theme.prompt_glyph,
+                    messages::partial_prefix(&self.language),
+                    self.theme.reset
+                ),
                 self.cols as usize,
             ),
-            BarState::Injected(detail) => truncate(format!("✓ {detail}"), self.cols as usize),
+            BarState::Confirm(prompt) => truncate(
+                messages::confirm(&self.language, prompt),
+                self.cols as usize,
+            ),
+            BarState::Injected(_) => truncate(
+                format!("✓ {}", messages::injected(&self.language)),
+                self.cols as usize,
+            ),
             BarState::Error(error) => truncate(format!("✗ {error}"), self.cols as usize),
-            BarState::Exiting => "TermVox · cerrando sesión…".to_string(),
+            BarState::Exiting => format!(
+                "{}{}{}",
+                self.theme.dim,
+                messages::exiting(&self.language),
+                self.theme.reset
+            ),
+            BarState::Notice(text) => truncate(text.clone(), self.cols as usize),
         };
         let mut stdout = io::stdout();
         stdout.execute(cursor::SavePosition)?;
@@ -113,15 +162,6 @@ impl ShellBar {
         stdout.execute(cursor::RestorePosition)?;
         stdout.flush()?;
         Ok(())
-    }
-}
-
-fn pulse_dots(frame: u8) -> String {
-    match frame % 4 {
-        0 => "   ".into(),
-        1 => ".  ".into(),
-        2 => ".. ".into(),
-        _ => "...".into(),
     }
 }
 

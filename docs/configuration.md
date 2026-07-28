@@ -187,7 +187,22 @@ alt_hotkeys = ["Ctrl+Space"]  # recommended on Wayland when F8 is captured
 exit_hotkey = "Ctrl+\\"    # leave TermVox wrapper (Ctrl+C goes to the agent)
 auto_submit = true         # press Enter after injecting transcribed text
 skip_confirmation = true   # inject without y/N prompt in shell mode
+
+[workspace]
+persist_session = true
+discover_session = true
+session_file = ".termvox/session.json"   # optional relative override
 ```
+
+When `persist_session` is enabled, TermVox stores the upstream agent session id
+under your project directory (`.termvox/session.json`, gitignored by default) and
+reuses it the next time you open the same workspace — in `termvox shell`,
+`termvox start` with `display = "shell"`, or the default branded subprocess mode.
+Use `termvox shell --fresh` to ignore the saved session.
+
+When no saved id exists, `discover_session` (default `true`) probes agent-local
+stores (Cursor transcripts, OpenCode sqlite, Claude projects) and PTY output
+heuristics to resume the latest chat for the current directory.
 
 The mic bar is redrawn continuously so upstream TUIs (Cursor, OpenCode, etc.)
 cannot erase it. Use `exit_hotkey` to return to your normal shell.

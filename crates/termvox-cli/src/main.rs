@@ -27,6 +27,7 @@ mod shell;
 mod shim;
 mod telemetry;
 mod ui;
+mod workspace;
 
 use anyhow::Result;
 use tracing_subscriber::EnvFilter;

@@ -4,12 +4,11 @@ TermVox is a voice interface for terminal coding agents. It records an
 utterance, transcribes it, shows the resulting prompt, and sends it to a
 selected agent only after the configured confirmation policy allows it.
 
-> **Project status:** TermVox is pre-release software. The source currently
-> includes adapters for Codex, Claude, Cursor, Gemini, Aider, Amp, and OpenCode;
-> embedded local Whisper and optional OpenAI transcription; and sidecar contracts
-> for Parakeet and Vosk. The default speech path is free, local, and needs no API
-> key. Coding-agent availability still depends on separately installed upstream
-> tools. No release artifacts or signatures are claimed to be available.
+> **Project status:** TermVox is alpha software (`0.1.0-alpha.7`) with published
+> multi-platform releases. It includes adapters for Codex, Claude, Cursor,
+> Gemini, Aider, Amp, and OpenCode; embedded local Whisper and optional OpenAI
+> transcription; workspace session resume; and the integrated agent shell. Run
+> `termvox doctor` after installing or upgrading upstream agent CLIs.
 
 ## Quick start
 
@@ -43,9 +42,13 @@ no paste workflow:
 
 ```bash
 termvox shell                    # agent from termvox.toml
-termvox shell --agent opencode   # OpenCode TUI + voice (F8)
+termvox shell --agent opencode   # OpenCode TUI + voice (F8 / Ctrl+Space)
+termvox shell --fresh            # ignore saved workspace session
 termvox install-shim --agent claude --force   # Unix: wrap `claude`
 ```
+
+Workspace sessions are stored in `.termvox/session.json` (gitignored) and reused
+when you reopen the same project directory.
 
 While `termvox start` is focused, hold `Space` to record, release it to
 transcribe, review the prompt, and answer the confirmation question. Press `q`

@@ -9,6 +9,7 @@ mod performance;
 mod pipeline;
 mod policy;
 mod sessions;
+mod session_store;
 
 pub use agents::*;
 pub use auth::*;
@@ -19,6 +20,7 @@ pub use performance::*;
 pub use pipeline::*;
 pub use policy::*;
 pub use sessions::*;
+pub use session_store::*;
 
 use thiserror::Error;
 

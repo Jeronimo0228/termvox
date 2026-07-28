@@ -40,7 +40,17 @@ pub fn is_voice_hotkey(event: &KeyEvent, specifications: &[String]) -> bool {
 /// Returns true when the key event should leave the integrated shell wrapper.
 #[must_use]
 pub fn is_shell_exit(event: &KeyEvent, specification: &str) -> bool {
-    matches_hotkey(event, specification)
+    if matches_hotkey(event, specification) {
+        return true;
+    }
+    // Linux TTYs often deliver Ctrl+\ as ASCII FS (0x1c) without CONTROL set.
+    if specification.replace(' ', "").eq_ignore_ascii_case("Ctrl+\\")
+        && matches!(event.kind, KeyEventKind::Press | KeyEventKind::Repeat)
+        && event.code == KeyCode::Char('\x1c')
+    {
+        return true;
+    }
+    false
 }
 
 /// Voice hotkeys used in shell mode, including Wayland-friendly fallbacks.
@@ -182,6 +192,12 @@ mod tests {
     #[test]
     fn detects_shell_exit_hotkey() {
         let event = KeyEvent::new(KeyCode::Char('\\'), KeyModifiers::CONTROL);
+        assert!(is_shell_exit(&event, "Ctrl+\\"));
+    }
+
+    #[test]
+    fn detects_shell_exit_from_raw_fs_byte() {
+        let event = KeyEvent::new(KeyCode::Char('\x1c'), KeyModifiers::NONE);
         assert!(is_shell_exit(&event, "Ctrl+\\"));
     }
 

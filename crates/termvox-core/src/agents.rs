@@ -91,6 +91,8 @@ pub struct AgentProfile {
 pub struct AgentInvocationOptions {
     pub extra_args: Vec<String>,
     pub trust_workspace: bool,
+    /// Integrated shell mode (`termvox shell`): Cursor trust is implied for the cwd.
+    pub shell_mode: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
@@ -168,6 +170,16 @@ impl AgentProfile {
         AgentInvocationOptions {
             extra_args: self.extra_args.clone(),
             trust_workspace: self.trust_workspace,
+            shell_mode: false,
+        }
+    }
+
+    #[must_use]
+    pub fn shell_invocation(&self) -> AgentInvocationOptions {
+        AgentInvocationOptions {
+            extra_args: self.extra_args.clone(),
+            trust_workspace: self.trust_workspace,
+            shell_mode: true,
         }
     }
 
@@ -335,7 +347,10 @@ pub fn agent_config_warnings(config: &crate::AppConfig) -> Vec<String> {
     let active = config.agent;
     let profile = config.agents.profile(active);
 
-    if active == AgentKind::Cursor && !profile.trust_workspace {
+    if active == AgentKind::Cursor
+        && !profile.trust_workspace
+        && profile.resolved_display(active) != AgentDisplayMode::Shell
+    {
         warnings.push(
             "agents.cursor.trust_workspace is false; Cursor may reject non-interactive runs."
                 .into(),
@@ -384,8 +399,10 @@ mod tests {
 
     #[test]
     fn cursor_companion_defaults_to_both_delivery() {
-        let mut profile = AgentProfile::default();
-        profile.display = Some(AgentDisplayMode::Companion);
+        let profile = AgentProfile {
+            display: Some(AgentDisplayMode::Companion),
+            ..Default::default()
+        };
         assert_eq!(
             profile.resolved_delivery(AgentKind::Cursor),
             PromptDelivery::Both
@@ -394,8 +411,10 @@ mod tests {
 
     #[test]
     fn cursor_companion_defaults_to_cursor_window_title() {
-        let mut profile = AgentProfile::default();
-        profile.display = Some(AgentDisplayMode::Companion);
+        let profile = AgentProfile {
+            display: Some(AgentDisplayMode::Companion),
+            ..Default::default()
+        };
         assert_eq!(
             profile.resolved_paste_window_title(AgentKind::Cursor),
             Some("Cursor")

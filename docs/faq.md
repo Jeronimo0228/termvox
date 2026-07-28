@@ -71,8 +71,10 @@ coding agent, and the protocol remains unstable.
 ## Does one interactive run preserve the agent session?
 
 Yes. `termvox start` keeps one local session and structured adapters can reuse a
-remote session ID across utterances. Separate `termvox record` processes do not
-share that in-memory session.
+remote session ID across utterances. With `[workspace].persist_session = true`
+(default), that upstream id is also saved under `.termvox/session.json` in the
+project so the next `termvox start` or `termvox shell` in the same directory can
+resume the chat. Separate `termvox record` processes do not share that session.
 
 ## Where do I ask for help or report a vulnerability?
 
