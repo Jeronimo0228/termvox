@@ -56,7 +56,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Install MSRV
         if: matrix.toolchain == '1.88'
-        uses: dtolnay/rust-toolchain@1.88.0
+        uses: dtolnay/rust-toolchain@1.100.0
       - name: Install Linux audio headers
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libasound2-dev
