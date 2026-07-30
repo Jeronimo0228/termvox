@@ -77,8 +77,25 @@ Example layout:
 
 Mic states: idle → recording → transcribing → injected → idle.
 
-Default voice hotkey: **F8** (configurable via `[shell].hotkey`).
-Leave the wrapper with **`Ctrl+\\`** (`[shell].exit_hotkey`) without sending Ctrl+C to the agent.
+Default voice hotkey: **F8** (configurable via `[shell].hotkey`). On Wayland,
+**Ctrl+Space** is added automatically as a fallback (`[shell].alt_hotkeys`).
+
+Leave the wrapper with **`Ctrl+\\`** (`[shell].exit_hotkey`) without sending Ctrl+C
+to the agent. **Ctrl+C** is forwarded to the upstream TUI.
+
+## Workspace sessions
+
+When `[workspace].persist_session` is enabled (default), TermVox saves the
+upstream session id to `.termvox/session.json` and passes resume flags on the
+next launch in the same project directory. Use `termvox shell --fresh` to ignore
+the saved session. With `discover_session = true` (default), TermVox also probes
+agent-local stores when no id is saved yet.
+
+## Cursor trust
+
+In shell mode, Cursor receives `-f` automatically so the workspace trust dialog
+does not block the TUI. Branded subprocess mode still respects
+`agents.cursor.trust_workspace` in config.
 
 ## Authentication
 
@@ -99,8 +116,7 @@ into an external TUI you manage yourself.
 
 ## Agent-specific notes
 
-- **Cursor:** honor `trust_workspace` via upstream flags; no `paste_window_title`
-  needed in shell mode (stdin injection replaces auto-paste).
+- **Cursor:** shell mode auto-trusts the cwd (`-f`); stdin injection replaces auto-paste.
 - **OpenCode:** launches the interactive TUI (`opencode` with no subcommand).
   One-shot `opencode run --format json` is used by `termvox start` in branded
   mode. Authenticate with `opencode auth login` first.
@@ -120,4 +136,5 @@ the mic layer.
 
 ## Status
 
-**Available in v0.1.0-alpha.4** via `termvox shell` and `termvox install-shim`.
+**Stable in v0.1.0-alpha.7** — workspace session resume, localized mic bar,
+streaming partial transcripts, and PTY filters for Kitty keyboard protocols.
