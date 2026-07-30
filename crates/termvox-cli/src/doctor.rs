@@ -2,7 +2,7 @@ use anyhow::Result;
 use termvox_audio::input_devices;
 use termvox_core::{
     AgentAdapter, AppConfig, SpeechEngineKind, agent_config_warnings, agent_hints,
-    detect_environment,
+    detect_environment, usage_hints,
 };
 use termvox_hotkeys::detect_support;
 
@@ -125,6 +125,9 @@ pub(crate) async fn run(config: AppConfig, json: bool) -> Result<()> {
     for hint in agent_hints(config.agent) {
         println!("  hint: {hint}");
     }
+    for hint in usage_hints(&config) {
+        println!("  hint: {hint}");
+    }
     println!(
         "\nTerminal PTT: {}. Global hotkeys are optional and platform-specific.",
         config.push_to_talk
@@ -175,6 +178,7 @@ async fn json_report(config: &AppConfig) -> Result<()> {
         agents.push(serde_json::to_value(agent.probe().await)?);
     }
     let hotkey = detect_support();
+    let hints = usage_hints(config);
     println!(
         "{}",
         serde_json::to_string_pretty(&serde_json::json!({
@@ -187,7 +191,8 @@ async fn json_report(config: &AppConfig) -> Result<()> {
                 "global_available": hotkey.global_available,
                 "key_release_available": hotkey.key_release_available,
                 "guidance": hotkey.guidance,
-            }
+            },
+            "hints": hints,
         }))?
     );
     Ok(())

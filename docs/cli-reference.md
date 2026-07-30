@@ -43,7 +43,8 @@ Failures are printed as `[!!]`; unavailable optional agents are printed as `[--]
 
 The command currently reports diagnostics but may still exit successfully when
 individual checks fail. Read its output; do not use exit status alone as a
-health signal. `--json` emits machine-readable diagnostics.
+health signal. `--json` emits machine-readable diagnostics including a `hints`
+array (shell vs companion, Whisper model/profile alignment, Wayland, session path).
 
 ### `termvox plugins [list|inspect ID|test ID]`
 

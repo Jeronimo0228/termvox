@@ -4,7 +4,7 @@ TermVox is a voice interface for terminal coding agents. It records an
 utterance, transcribes it, shows the resulting prompt, and sends it to a
 selected agent only after the configured confirmation policy allows it.
 
-> **Project status:** TermVox is alpha software (`0.1.0-alpha.7`) with published
+> **Project status:** TermVox is alpha software (`0.1.0-alpha.8`) with published
 > multi-platform releases. It includes adapters for Codex, Claude, Cursor,
 > Gemini, Aider, Amp, and OpenCode; embedded local Whisper and optional OpenAI
 > transcription; workspace session resume; and the integrated agent shell. Run

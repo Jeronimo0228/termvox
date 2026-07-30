@@ -8,7 +8,7 @@ modest hardware without loading large models into RAM.
 | Profile | Model | RAM (approx.) | Best for |
 | --- | --- | --- | --- |
 | `fast` (default) | `ggml-tiny.bin` (~74 MiB) | Lowest | Short voice commands, daily use |
-| `balanced` | `ggml-tiny.bin` | Low | Slightly longer utterances |
+| `balanced` | `ggml-base.bin` (~142 MiB) | Medium | Better accuracy on longer phrases |
 | `accurate` | `ggml-base.bin` (~142 MiB) | Higher | Noisy rooms, rare terms |
 | `custom` | Your choice | Varies | Manual tuning |
 

@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::{Result, bail};
-use termvox_core::{AgentKind, AppConfig, SpeechEngineKind};
+use termvox_core::{AgentDisplayMode, AgentKind, AppConfig, SpeechEngineKind};
 
 use crate::presets;
 
@@ -62,6 +62,18 @@ pub(crate) fn init_config(
             && confirm_yes_no("Trust this project directory for Cursor CLI non-interactive runs?")?
         {
             config.agents.cursor.trust_workspace = true;
+        }
+        if matches!(config.agent, AgentKind::Cursor | AgentKind::OpenCode)
+            && confirm_yes_no(
+                "Use integrated agent shell (termvox shell) instead of companion paste mode?",
+            )?
+        {
+            let profile = match config.agent {
+                AgentKind::Cursor => &mut config.agents.cursor,
+                AgentKind::OpenCode => &mut config.agents.opencode,
+                _ => unreachable!(),
+            };
+            profile.display = Some(AgentDisplayMode::Shell);
         }
     }
     let text = toml::to_string_pretty(&config)?;
