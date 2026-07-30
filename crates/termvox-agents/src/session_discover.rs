@@ -1,9 +1,8 @@
 //! Discover upstream session ids from agent state on disk and PTY output heuristics.
 
-use std::{
-    path::{Path, PathBuf},
-    process::{Command, Stdio},
-};
+use std::path::Path;
+
+use rusqlite::Connection;
 
 use crate::SupportedAgent;
 
@@ -34,14 +33,14 @@ pub fn scan_output_for_session_id(kind: SupportedAgent, text: &str) -> Option<St
 
 fn discover_cursor(cwd: &Path) -> Option<String> {
     let root = dirs::home_dir()?.join(".cursor/projects").join(cursor_project_slug(cwd));
-    latest_subdirectory_id(root.join("agent-transcripts"))
+    latest_subdirectory_id(&root.join("agent-transcripts"))
 }
 
 fn discover_claude(cwd: &Path) -> Option<String> {
     let root = dirs::home_dir()?
         .join(".claude/projects")
         .join(claude_project_slug(cwd));
-    latest_subdirectory_id(root)
+    latest_subdirectory_id(&root).or_else(|| latest_jsonl_session_id(&root))
 }
 
 fn discover_opencode(cwd: &Path) -> Option<String> {
@@ -49,37 +48,58 @@ fn discover_opencode(cwd: &Path) -> Option<String> {
     if !db.is_file() {
         return None;
     }
+    let cwd_string = cwd.display().to_string();
     query_sqlite(
         &db,
-        &format!(
-            "SELECT id FROM session WHERE directory = '{}' ORDER BY time_updated DESC LIMIT 1;",
-            cwd.display().to_string().replace('\'', "''")
-        ),
+        "SELECT id FROM session WHERE directory = ?1 ORDER BY time_updated DESC LIMIT 1;",
+        &[&cwd_string],
     )
     .or_else(|| {
         query_sqlite(
             &db,
             "SELECT id FROM session ORDER BY time_updated DESC LIMIT 1;",
+            &[],
         )
     })
 }
 
-fn query_sqlite(db: &Path, sql: &str) -> Option<String> {
-    let output = Command::new("sqlite3")
-        .arg(db)
-        .arg(sql)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
+fn query_sqlite(db: &Path, sql: &str, params: &[&str]) -> Option<String> {
+    let connection = Connection::open(db).ok()?;
+    let mut statement = connection.prepare(sql).ok()?;
+    let id: String = statement
+        .query_map(rusqlite::params_from_iter(params.iter().copied()), |row| row.get(0))
+        .ok()?
+        .find_map(Result::ok)?;
+    if id.is_empty() || !looks_like_session_id(&id) {
+        None
+    } else {
+        Some(id)
     }
-    let id = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if id.is_empty() { None } else { Some(id) }
 }
 
-fn latest_subdirectory_id(dir: PathBuf) -> Option<String> {
+fn latest_jsonl_session_id(root: &Path) -> Option<String> {
+    let mut candidates = Vec::new();
+    let entries = std::fs::read_dir(root).ok()?;
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        if path.extension().is_some_and(|ext| ext == "jsonl")
+            && let Ok(meta) = entry.metadata()
+        {
+            candidates.push((meta.modified().ok(), path));
+        }
+    }
+    candidates.sort_by_key(|(modified, _)| *modified);
+    candidates
+        .pop()
+        .map(|(_, path)| {
+            path.file_stem()
+                .map(|stem| stem.to_string_lossy().into_owned())
+                .unwrap_or_default()
+        })
+        .filter(|id| looks_like_session_id(id))
+}
+
+fn latest_subdirectory_id(dir: &Path) -> Option<String> {
     let mut entries: Vec<_> = std::fs::read_dir(dir)
         .ok()?
         .filter_map(Result::ok)
@@ -98,7 +118,10 @@ fn latest_subdirectory_id(dir: PathBuf) -> Option<String> {
 }
 
 fn looks_like_session_id(value: &str) -> bool {
-    value.len() >= 8 && value.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_')
+    value.len() >= 8
+        && value
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_')
 }
 
 fn cursor_project_slug(cwd: &Path) -> String {
@@ -154,5 +177,38 @@ mod tests {
             scan_output_for_session_id(SupportedAgent::Cursor, sample),
             Some("96f670e8-613e-4277-9c0e-ef4a9a118683".into())
         );
+    }
+
+    #[test]
+    fn opencode_sqlite_round_trip() {
+        let dir = std::env::temp_dir().join("termvox-opencode-test");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let db = dir.join("opencode.db");
+        let connection = Connection::open(&db).expect("open db");
+        connection
+            .execute_batch(
+                "CREATE TABLE session (
+                    id TEXT PRIMARY KEY,
+                    directory TEXT NOT NULL,
+                    time_updated INTEGER NOT NULL
+                );",
+            )
+            .expect("schema");
+        connection
+            .execute(
+                "INSERT INTO session (id, directory, time_updated) VALUES (?1, ?2, ?3);",
+                rusqlite::params!["ses_test_1", "/tmp/project", 100_i64],
+            )
+            .expect("insert");
+        assert_eq!(
+            query_sqlite(
+                &db,
+                "SELECT id FROM session WHERE directory = ?1 ORDER BY time_updated DESC LIMIT 1;",
+                &["/tmp/project"],
+            ),
+            Some("ses_test_1".into())
+        );
+        let _ = std::fs::remove_dir_all(dir);
     }
 }

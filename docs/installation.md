@@ -17,7 +17,7 @@ the Cursor preset. To force a source build instead:
 TERMVOX_INSTALL_SOURCE=1 curl -fsSL .../scripts/install.sh | bash
 ```
 
-Pin a release with `TERMVOX_VERSION=v0.1.0-alpha.7`.
+Pin a release with `TERMVOX_VERSION=v0.1.0-alpha.8`.
 
 ## Build from source
 

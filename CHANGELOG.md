@@ -10,6 +10,32 @@ in minor or patch increments and must be called out explicitly.
 
 ## [Unreleased]
 
+## [0.1.0-alpha.8] - 2026-07-30
+
+### Added
+
+- Embedded SQLite (`rusqlite`) for OpenCode session discovery — no external
+  `sqlite3` CLI required
+- Claude session discovery from `.jsonl` files when no session subdirectory exists
+- `usage_hints()` in `termvox-core` — companion→shell, Whisper model/profile
+  mismatches, Wayland guidance, workspace session path
+- `termvox doctor --json` now includes a `hints` array
+- Interactive `termvox setup` prompt to prefer `display = "shell"` for
+  Cursor/OpenCode
+- CI job `shell-smoke` (`scripts/shell-smoke.sh`) — shell unit tests, release
+  build, doctor JSON smoke
+- Spanish docs: `docs/es/cli-reference.md`, `docs/es/troubleshooting.md`
+- Packaging notes: `docs/packaging.md` (Homebrew sketch, `.deb`, Flatpak outline)
+
+### Changed
+
+- `performance_profile = "balanced"` now selects `ggml-base.bin` (was tiny)
+- `performance_profile = "accurate"` also defaults to `ggml-base.bin`
+
+### Fixed
+
+- OpenCode session queries use parameterized SQL instead of string interpolation
+
 ## [0.1.0-alpha.7] - 2026-07-28
 
 ### Added
@@ -38,7 +64,8 @@ in minor or patch increments and must be called out explicitly.
 - Mic bar redraw during transcribing and after upstream TUI repaints
 - Clippy and docs for workspace session store APIs
 
-[Unreleased]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.7...main
+[Unreleased]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.8...main
+[0.1.0-alpha.8]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.7...v0.1.0-alpha.8
 [0.1.0-alpha.7]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.6...v0.1.0-alpha.7
 
 ## [0.1.0-alpha.6] - 2026-07-28

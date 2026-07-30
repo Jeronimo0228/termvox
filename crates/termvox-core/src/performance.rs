@@ -5,8 +5,8 @@ use crate::{AppConfig, PerformanceProfile};
 #[must_use]
 pub fn default_whisper_model(profile: PerformanceProfile) -> PathBuf {
     let filename = match profile {
-        PerformanceProfile::Fast | PerformanceProfile::Balanced => "ggml-tiny.bin",
-        PerformanceProfile::Accurate | PerformanceProfile::Custom => "ggml-base.bin",
+        PerformanceProfile::Balanced | PerformanceProfile::Accurate => "ggml-base.bin",
+        PerformanceProfile::Fast | PerformanceProfile::Custom => "ggml-tiny.bin",
     };
     data_path(&format!("termvox/models/{filename}"))
 }
@@ -88,6 +88,14 @@ fn data_path(relative: &str) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn balanced_profile_prefers_base_model() {
+        let mut config = AppConfig::default();
+        config.performance_profile = PerformanceProfile::Balanced;
+        apply_performance_profile(&mut config);
+        assert!(config.whisper.model.ends_with("ggml-base.bin"));
+    }
 
     #[test]
     fn fast_profile_prefers_tiny_model() {

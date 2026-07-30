@@ -1,6 +1,6 @@
 # Inicio rápido
 
-TermVox **0.1.0-alpha.7** publica binarios para Linux, macOS y Windows en
+TermVox **0.1.0-alpha.8** publica binarios para Linux, macOS y Windows en
 [GitHub Releases](https://github.com/Jeronimo0228/termvox/releases). También puedes
 compilar desde el código fuente.
 
@@ -15,7 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/i
 Versión fija:
 
 ```bash
-TERMVOX_VERSION=v0.1.0-alpha.7 curl -fsSL .../scripts/install.sh | bash
+TERMVOX_VERSION=v0.1.0-alpha.8 curl -fsSL .../scripts/install.sh | bash
 ```
 
 **Desde fuente:**
