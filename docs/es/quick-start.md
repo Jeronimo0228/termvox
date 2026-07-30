@@ -1,89 +1,102 @@
 # Inicio rápido
 
-TermVox es una interfaz de voz para agentes de programación en la terminal. El
-proyecto está en fase alfa. Incluye adaptadores para Codex, Claude, Cursor,
-Gemini, Aider y Amp; integra Whisper local embebido y transcripción opcional de
-OpenAI; y ofrece un contrato de procesos auxiliares para Parakeet y Vosk. La
-transcripción local por defecto es gratuita y no requiere API key. Debes instalar
-por separado los agentes y, si los usas, los sidecars de Parakeet o Vosk.
-
-La única instalación verificada por esta documentación es compilar el código
-fuente. No se afirma que existan binarios publicados o firmados.
+TermVox **0.1.0-alpha.7** publica binarios para Linux, macOS y Windows en
+[GitHub Releases](https://github.com/Jeronimo0228/termvox/releases). También puedes
+compilar desde el código fuente.
 
 ## Instalación
 
-Instala Rust 1.88 o posterior, Git, las dependencias de audio del sistema y un
-agente compatible.
+**Recomendado (script):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
+```
+
+Versión fija:
+
+```bash
+TERMVOX_VERSION=v0.1.0-alpha.7 curl -fsSL .../scripts/install.sh | bash
+```
+
+**Desde fuente:**
 
 ```bash
 git clone https://github.com/Jeronimo0228/termvox.git
 cd termvox
-
-# Fedora/RHEL: sudo dnf install alsa-lib-devel
+# Fedora: sudo dnf install alsa-lib-devel
 # Debian/Ubuntu: sudo apt-get install libasound2-dev pkg-config
 cargo install --path crates/termvox-cli
+```
 
-termvox init
+Instala al menos un agente compatible: `codex`, `claude`, `agent` (Cursor),
+`gemini`, `aider`, `amp` u `opencode`. La transcripción local (Whisper) no
+requiere API key.
+
+## Configuración inicial
+
+```bash
+termvox init --preset cursor    # u opencode, claude, codex, gemini, rust-web
 termvox models install default
+termvox config validate
 termvox doctor
 ```
 
-En macOS instala primero las herramientas de línea de comandos de Xcode y
-autoriza el micrófono para la aplicación de terminal. En Windows usa Rust con
-la cadena MSVC y Microsoft C++ Build Tools.
+## Uso recomendado — shell integrado
 
-## Transcripción
+Para Cursor, OpenCode, Claude Code, Codex y demás TUIs, abre el proyecto y ejecuta:
 
-La transcripción local está integrada. No necesitas `whisper-cli` ni una API key.
-Instala el modelo revisado con `termvox models install default` o deja que los
-comandos interactivos te lo ofrezcan la primera vez.
-
-```toml
-speech_engine = "whisper"
-
-[whisper]
-model = "/ruta/absoluta/ggml-base.bin" # opcional
-threads = 0
+```bash
+cd tu-proyecto
+termvox shell
 ```
 
-Para OpenAI:
+Cambiar agente en una sesión:
+
+```bash
+termvox shell --agent opencode
+termvox shell --agent cursor
+```
+
+| Acción | Tecla |
+| --- | --- |
+| Activar voz | **F8** o **Ctrl+Space** (Wayland) |
+| Salir del wrapper TermVox | **Ctrl+\\** |
+| Ctrl+C al agente | **Ctrl+C** (no cierra TermVox) |
+
+TermVox guarda el id de chat en `.termvox/session.json` y lo reutiliza al volver
+al mismo directorio. Usa `termvox shell --fresh` para ignorar la sesión guardada.
+
+## Modo alternativo — branded / companion
+
+Con `display = "branded"` o `display = "companion"` en `termvox.toml`:
+
+```bash
+termvox start
+```
+
+Mantén **Espacio**, habla y suelta. Confirma con `y` si se pide. Pulsa `q` o
+**Ctrl+C** para salir.
+
+Si `display = "shell"`, `termvox start` delega a `termvox shell`.
+
+## Prueba rápida de micrófono
+
+```bash
+termvox test --seconds 3
+```
+
+## Transcripción OpenAI (opcional)
 
 ```toml
 speech_engine = "openai"
 
 [openai]
 api_key_env = "OPENAI_API_KEY"
-model = "gpt-4o-mini-transcribe"
-endpoint = "https://api.openai.com/v1/audio/transcriptions"
 ```
 
 ```bash
 export OPENAI_API_KEY="tu-clave"
 ```
 
-Este modo envía cada grabación al endpoint configurado. Revisa las políticas de
-privacidad, retención y costos del proveedor.
-
-## Uso
-
-Selecciona `agent = "codex"`, `"claude"`, `"cursor"`, `"gemini"`, `"aider"`,
-`"amp"` o `"opencode"` en `termvox.toml` y ejecuta:
-
-```bash
-termvox config validate
-termvox doctor
-termvox start
-```
-
-Mantén presionada la barra espaciadora, habla y suéltala. TermVox muestra la
-transcripción y el prompt procesado. Por defecto debes responder `y` o `yes`
-antes de enviarlo. Pulsa `q` o `Ctrl+C` para salir.
-
-TermVox no es un sandbox. El agente conserva sus propios permisos, credenciales
-y políticas. No dictes secretos a un servicio remoto y conserva la
-confirmación manual.
-
-Documentación completa en inglés: [inicio rápido](../quick-start.md),
-[instalación](../installation.md), [configuración](../configuration.md),
-[seguridad y privacidad](../privacy-security.md) y
-[solución de problemas](../troubleshooting.md).
+Documentación en inglés: [quick start](../quick-start.md), [agent shell](../agent-shell.md),
+[CLI reference](../cli-reference.md), [configuración](../configuration.md).

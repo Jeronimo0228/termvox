@@ -108,11 +108,22 @@ Plugin stdout must contain only newline-delimited JSON-RPC. The child receives
 only environment variables in `env_allowlist`; add required variable names
 explicitly without putting secret values in TOML.
 
+## Integrated shell (`termvox shell`)
+
+- **Mic bar disappears** — upstream TUIs redraw the screen; TermVox redraws the bar
+  continuously. If it still vanishes, update to alpha.7+.
+- **F8 does nothing on Wayland** — use **Ctrl+Space** (`[shell].alt_hotkeys`) or
+  configure a global hotkey via the daemon.
+- **Cannot exit shell** — use **Ctrl+\\** (`[shell].exit_hotkey`), not Ctrl+C.
+- **Cursor trust dialog** — use `termvox shell` (auto-trusts) or set
+  `agents.cursor.trust_workspace = true` for branded mode.
+- **Session not resumed** — check `.termvox/session.json`; run with `--fresh` to
+  debug; ensure `discover_session = true` for agent-local lookup.
+
 ## `termvox update` does not update
 
-That command is intentionally informational. Build and install the desired
-source revision manually. The canonical repository is
-<https://github.com/Jeronimo0228/termvox>.
+That command is intentionally informational. Download a newer release from
+<https://github.com/Jeronimo0228/termvox/releases> or rebuild from source.
 
 When requesting help, include the TermVox revision, OS, Rust version, relevant
 configuration with secrets removed, command output, and exact reproduction

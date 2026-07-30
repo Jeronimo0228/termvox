@@ -21,17 +21,25 @@ In an interactive terminal, prompts for language, push-to-talk key, speech
 engine, and agent, then writes configuration. With non-terminal stdin, it
 writes defaults. Replacement rules match `init`.
 
-### `termvox start [--toggle]`
+### `termvox start [--toggle] [--global-hotkey SHORTCUT]`
 
-Starts terminal-focused push-to-talk. Hold the configured key, release it to
-transcribe and process the prompt, then confirm when asked. Use `q` or `Ctrl+C`
-to exit. With `--toggle`, one key press starts recording and the next stops it.
+Starts the configured interactive session. Behavior depends on `[agents.<name>].display`:
+
+- **`shell`** — delegates to `termvox shell` (integrated mic bar + upstream TUI)
+- **`branded`** — TermVox-owned footer; agent runs as JSONL subprocess per utterance
+- **`companion`** — transcribe and deliver via clipboard/paste to an external window
+
+In branded mode, hold the configured push-to-talk key (default **Space**), release
+to transcribe, confirm when asked. Use `q` or **Ctrl+C** to exit. With `--toggle`,
+one press starts recording and the next stops it.
+
+Workspace sessions are hydrated from `.termvox/session.json` and saved on exit.
 
 ### `termvox doctor [--json]`
 
 Validates configuration, lists input devices, health-checks the selected speech
-engine, probes all six agent CLIs, and reports hotkey capability. Failures are
-printed as `[!!]`; unavailable optional agents are printed as `[--]`.
+engine, probes all **seven** built-in agent CLIs, and reports hotkey capability.
+Failures are printed as `[!!]`; unavailable optional agents are printed as `[--]`.
 
 The command currently reports diagnostics but may still exit successfully when
 individual checks fail. Read its output; do not use exit status alone as a
@@ -39,7 +47,7 @@ health signal. `--json` emits machine-readable diagnostics.
 
 ### `termvox plugins [list|inspect ID|test ID]`
 
-- `list` (the default) shows all six built-in adapters and configured plugins.
+- `list` (the default) shows all seven built-in adapters and configured plugins.
 - `inspect ID` starts an enabled plugin, initializes it, prints its manifest,
   and shuts it down.
 - `test ID` also calls `probe` and prints its result.
@@ -85,20 +93,27 @@ Example:
 termvox init --preset cursor --force
 ```
 
-### `termvox shell [--agent AGENT] [--] [ARGS...]`
+### `termvox shell [--agent AGENT] [--fresh] [--] [ARGS...]`
 
 Launches the upstream agent CLI inside an integrated PTY with a persistent
 TermVox mic bar on the last terminal row. Works with Codex, Claude, Cursor,
-Gemini, Aider, Amp, and OpenCode. Default voice hotkey: **F8** (see `[shell].hotkey`).
+Gemini, Aider, Amp, and OpenCode.
 
 ```bash
 termvox shell
 termvox shell --agent claude
 termvox shell --agent opencode
+termvox shell --fresh                    # ignore saved .termvox/session.json
 termvox shell --agent cursor -- --model gpt-5
 ```
 
-Exits before launch if the selected agent is not authenticated (see `termvox doctor`).
+**Voice hotkeys:** **F8** (default), plus `[shell].alt_hotkeys` (e.g. **Ctrl+Space**
+on Wayland). **Exit wrapper:** **Ctrl+\\** (`[shell].exit_hotkey`) — **Ctrl+C**
+is forwarded to the agent.
+
+Persists upstream session ids to `.termvox/session.json` when `[workspace].persist_session`
+is enabled (default). Exits before launch if the selected agent is not authenticated
+(see `termvox doctor`).
 
 ### `termvox install-shim [--agent AGENT] [--force]`
 
@@ -139,9 +154,9 @@ path is used. TermVox does not supply a trusted URL or hash.
 
 ### `termvox update`
 
-Prints version and release-check information. It does not fetch, verify,
-install, or replace the executable. The canonical project release page is
-<https://github.com/Jeronimo0228/termvox/releases>; releases may be absent.
+Prints version and release-check information. It does not auto-install updates.
+Download newer builds from
+<https://github.com/Jeronimo0228/termvox/releases>.
 
 ### `termvox completions SHELL`
 

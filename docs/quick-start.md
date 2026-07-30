@@ -1,91 +1,131 @@
 # Quick start
 
-This guide uses the current source tree. TermVox does not yet promise published
-packages or prebuilt binaries.
+TermVox **0.1.0-alpha.7** ships pre-built binaries for Linux, macOS, and Windows on
+[GitHub Releases](https://github.com/Jeronimo0228/termvox/releases). You can also
+build from source.
 
-## 1. Install prerequisites
+## 1. Install
 
-Install Rust 1.88 or later, microphone development libraries, and one supported
-agent:
+**Recommended (installer script):**
 
-- `codex` for Codex CLI
-- `claude` for Claude Code
-- `agent` for Cursor CLI
-- `gemini` for Gemini CLI
-- `aider` for Aider
-- `amp` for Amp
-- `opencode` for OpenCode
+```bash
+curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
+```
 
-Local speech-to-text is embedded. It does not require `whisper-cli`, an API key,
-or a paid speech service.
+Pin a version:
 
-## 2. Build and initialize
+```bash
+TERMVOX_VERSION=v0.1.0-alpha.7 curl -fsSL .../scripts/install.sh | bash
+```
+
+**From source:**
 
 ```bash
 git clone https://github.com/Jeronimo0228/termvox.git
 cd termvox
 cargo install --path crates/termvox-cli
+```
 
-termvox init
+Install prerequisites: Rust 1.88+, microphone libraries (see [installation](installation.md)),
+and at least one [supported agent CLI](agents.md):
+
+| Agent | Executable |
+| --- | --- |
+| Codex | `codex` |
+| Claude Code | `claude` |
+| Cursor | `agent` |
+| Gemini | `gemini` |
+| Aider | `aider` |
+| Amp | `amp` |
+| OpenCode | `opencode` |
+
+Local speech-to-text is embedded (Whisper). No API key is required for the default path.
+
+## 2. Initialize
+
+```bash
+termvox init --preset cursor    # or opencode, claude, codex, gemini, rust-web
 termvox models install default
 termvox config validate
 termvox doctor
 ```
 
-`termvox init` writes defaults to `termvox.toml`. `termvox setup` provides
-interactive choices when stdin is a terminal. Both refuse to replace an
-existing file unless `--force` is passed.
+`termvox init` writes `termvox.toml`. Use `--force` to replace an existing file.
+`termvox setup` provides interactive prompts when stdin is a terminal.
 
-## 3. Select transcription
+## 3. Recommended workflow — integrated shell
 
-The free local default is:
+For Cursor, OpenCode, Claude Code, Codex, and other TUIs, use the integrated mic bar:
+
+```bash
+cd your-project
+termvox shell
+```
+
+Or pick an agent for one session:
+
+```bash
+termvox shell --agent opencode
+termvox shell --agent cursor -- --model gpt-5
+```
+
+| Action | Key |
+| --- | --- |
+| Toggle voice | **F8** or **Ctrl+Space** (Wayland fallback) |
+| Leave TermVox wrapper | **Ctrl+\\** |
+| Send Ctrl+C to agent | **Ctrl+C** (does not exit TermVox) |
+
+TermVox saves the upstream chat id in `.termvox/session.json` and resumes it the
+next time you open the same project. Use `termvox shell --fresh` to start clean.
+
+See [Agent shell](agent-shell.md) for display modes, shims, and agent-specific notes.
+
+## 4. Alternative — branded / companion mode
+
+Set `display = "branded"` (default for Codex/Claude/Gemini) or `display = "companion"`
+(two-window paste) under `[agents.<name>]` in `termvox.toml`, then:
+
+```bash
+termvox start
+```
+
+Hold **Space** (default push-to-talk), speak, release. Confirm with `y` when prompted.
+Press `q` or **Ctrl+C** to exit.
+
+When `display = "shell"`, `termvox start` delegates to `termvox shell` automatically.
+
+## 5. Quick microphone test
+
+```bash
+termvox test --seconds 3
+```
+
+Records, transcribes, and prints text without contacting an agent.
+
+## 6. Speech engine (optional)
+
+Default (local, free):
 
 ```toml
 speech_engine = "whisper"
 
 [whisper]
-model = "/absolute/path/to/ggml-base.bin" # optional override
-threads = 0 # use available CPU parallelism
+model = "/absolute/path/to/ggml-tiny.bin"   # optional override
+threads = 0
 ```
 
-`termvox models install default` downloads the reviewed multilingual base model
-(about 142 MiB), verifies its SHA-256, and stores it in the TermVox data
-directory. Interactive recording commands ask before downloading it when
-missing; non-interactive commands print the explicit install command instead.
-
-For OpenAI:
+For OpenAI transcription:
 
 ```toml
 speech_engine = "openai"
 
 [openai]
 api_key_env = "OPENAI_API_KEY"
-model = "gpt-4o-mini-transcribe"
-endpoint = "https://api.openai.com/v1/audio/transcriptions"
 ```
 
 ```bash
 export OPENAI_API_KEY="your-key"
 ```
 
-OpenAI mode uploads each captured utterance to the configured endpoint.
-
-## 4. Speak to the agent
-
-```bash
-termvox start
-```
-
-Hold the configured key (`Space` by default), speak, and release. TermVox prints
-the transcript and processed prompt. The default policy asks before sending.
-Answer `y` or `yes` to continue; any other answer cancels. Press `q` or
-`Ctrl+C` to leave interactive mode.
-
-Run a short end-to-end microphone and transcription test with:
-
-```bash
-termvox test --seconds 3
-```
-
-Next: [configuration](configuration.md), [agents](agents.md), and
-[privacy and security](privacy-security.md).
+Next: [configuration](configuration.md), [CLI reference](cli-reference.md),
+[agents](agents.md), [troubleshooting](troubleshooting.md).

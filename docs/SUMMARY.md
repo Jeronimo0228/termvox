@@ -19,3 +19,4 @@
 - [Release readiness](release-readiness.md)
 - [Local validation report](validation-2026-07-27.md)
 - [Inicio rápido (Español)](es/quick-start.md)
+- [Shell integrado (Español)](es/shell.md)
