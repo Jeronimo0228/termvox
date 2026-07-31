@@ -42,7 +42,10 @@ pub(crate) async fn run(config: AppConfig, json: bool) -> Result<()> {
     );
     for agent in all_agents() {
         let info = agent.probe().await;
-        let detail = info.version.clone().unwrap_or_else(|| info.executable.clone());
+        let detail = info
+            .version
+            .clone()
+            .unwrap_or_else(|| info.executable.clone());
         if !info.installed {
             println!("[--] agent/{:<10} not installed", info.id);
             continue;

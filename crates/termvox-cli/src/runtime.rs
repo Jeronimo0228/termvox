@@ -632,7 +632,10 @@ pub(crate) fn all_agents() -> [CliAgent; 7] {
     ]
 }
 
-pub(crate) fn schedule_prewarm(speech: Arc<dyn SpeechEngine>, whisper: &termvox_core::WhisperConfig) {
+pub(crate) fn schedule_prewarm(
+    speech: Arc<dyn SpeechEngine>,
+    whisper: &termvox_core::WhisperConfig,
+) {
     if whisper.prewarm_on_start {
         tokio::spawn(async move {
             let _ = speech.prewarm().await;
@@ -686,6 +689,8 @@ pub(crate) async fn prepare_utterance(
         prompt,
         duration_ms: transcript.duration_ms,
         risk_matches: risk.matches,
-        requires_confirmation: config.confirmation || risk.requires_confirmation || !config.auto_send,
+        requires_confirmation: config.confirmation
+            || risk.requires_confirmation
+            || !config.auto_send,
     }))
 }

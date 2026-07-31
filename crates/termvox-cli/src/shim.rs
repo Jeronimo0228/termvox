@@ -10,7 +10,9 @@ pub(crate) fn parse_agent_kind(value: &str) -> Result<AgentKind> {
         "aider" => Ok(AgentKind::Aider),
         "amp" => Ok(AgentKind::Amp),
         "opencode" | "open-code" => Ok(AgentKind::OpenCode),
-        other => bail!("unknown agent: {other} (expected: codex, claude, cursor, gemini, aider, amp, opencode)"),
+        other => bail!(
+            "unknown agent: {other} (expected: codex, claude, cursor, gemini, aider, amp, opencode)"
+        ),
     }
 }
 

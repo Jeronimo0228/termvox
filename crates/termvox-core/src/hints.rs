@@ -3,8 +3,8 @@
 use std::path::Path;
 
 use crate::{
-    AgentDisplayMode, AgentKind, AppConfig, PerformanceProfile, SpeechEngineKind,
-    WorkspaceSession, detect_environment,
+    AgentDisplayMode, AgentKind, AppConfig, PerformanceProfile, SpeechEngineKind, WorkspaceSession,
+    detect_environment,
 };
 
 /// Non-fatal suggestions based on the active configuration and host environment.

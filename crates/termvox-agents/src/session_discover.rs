@@ -14,9 +14,10 @@ pub fn discover_remote_session(kind: SupportedAgent, cwd: &Path) -> Option<Strin
         SupportedAgent::Cursor => discover_cursor(&canonical),
         SupportedAgent::OpenCode => discover_opencode(&canonical),
         SupportedAgent::Claude => discover_claude(&canonical),
-        SupportedAgent::Codex | SupportedAgent::Gemini | SupportedAgent::Aider | SupportedAgent::Amp => {
-            None
-        }
+        SupportedAgent::Codex
+        | SupportedAgent::Gemini
+        | SupportedAgent::Aider
+        | SupportedAgent::Amp => None,
     }
 }
 
@@ -32,7 +33,9 @@ pub fn scan_output_for_session_id(kind: SupportedAgent, text: &str) -> Option<St
 }
 
 fn discover_cursor(cwd: &Path) -> Option<String> {
-    let root = dirs::home_dir()?.join(".cursor/projects").join(cursor_project_slug(cwd));
+    let root = dirs::home_dir()?
+        .join(".cursor/projects")
+        .join(cursor_project_slug(cwd));
     latest_subdirectory_id(&root.join("agent-transcripts"))
 }
 
@@ -67,7 +70,9 @@ fn query_sqlite(db: &Path, sql: &str, params: &[&str]) -> Option<String> {
     let connection = Connection::open(db).ok()?;
     let mut statement = connection.prepare(sql).ok()?;
     let id: String = statement
-        .query_map(rusqlite::params_from_iter(params.iter().copied()), |row| row.get(0))
+        .query_map(rusqlite::params_from_iter(params.iter().copied()), |row| {
+            row.get(0)
+        })
         .ok()?
         .find_map(Result::ok)?;
     if id.is_empty() || !looks_like_session_id(&id) {
@@ -105,12 +110,7 @@ fn latest_subdirectory_id(dir: &Path) -> Option<String> {
         .filter_map(Result::ok)
         .filter(|entry| entry.file_type().ok().is_some_and(|t| t.is_dir()))
         .collect();
-    entries.sort_by_key(|entry| {
-        entry
-            .metadata()
-            .ok()
-            .and_then(|meta| meta.modified().ok())
-    });
+    entries.sort_by_key(|entry| entry.metadata().ok().and_then(|meta| meta.modified().ok()));
     entries
         .pop()
         .map(|entry| entry.file_name().to_string_lossy().into_owned())
@@ -133,7 +133,9 @@ fn cursor_project_slug(cwd: &Path) -> String {
 fn claude_project_slug(cwd: &Path) -> String {
     format!(
         "-{}",
-        cwd.to_string_lossy().trim_start_matches('/').replace('/', "-")
+        cwd.to_string_lossy()
+            .trim_start_matches('/')
+            .replace('/', "-")
     )
 }
 
@@ -172,7 +174,8 @@ mod tests {
 
     #[test]
     fn heuristic_finds_session_id_in_json_fragment() {
-        let sample = r#"noise {"type":"system","session_id":"96f670e8-613e-4277-9c0e-ef4a9a118683"}"#;
+        let sample =
+            r#"noise {"type":"system","session_id":"96f670e8-613e-4277-9c0e-ef4a9a118683"}"#;
         assert_eq!(
             scan_output_for_session_id(SupportedAgent::Cursor, sample),
             Some("96f670e8-613e-4277-9c0e-ef4a9a118683".into())
