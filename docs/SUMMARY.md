@@ -20,7 +20,6 @@
 - [FAQ](faq.md)
 - [Roadmap](roadmap.md)
 - [Release readiness](release-readiness.md)
-- [Local validation report](validation-2026-07-27.md)
 - [Inicio rápido (Español)](es/quick-start.md)
 - [Referencia CLI (Español)](es/cli-reference.md)
 - [Shell integrado (Español)](es/shell.md)
