@@ -72,9 +72,7 @@ function activate(context) {
     context.subscriptions.push({ dispose: () => clearInterval(timer) });
 }
 async function runTermvox(args) {
-    const cliPath = vscode.workspace
-        .getConfiguration("termvox")
-        .get("cliPath", "termvox");
+    const cliPath = resolveCliPath(vscode.workspace.getConfiguration("termvox").get("cliPath", "termvox"));
     try {
         const { stdout, stderr } = await execFileAsync(cliPath, args, {
             env: process.env,
@@ -91,9 +89,7 @@ async function runTermvox(args) {
     }
 }
 async function daemonRunning() {
-    const cliPath = vscode.workspace
-        .getConfiguration("termvox")
-        .get("cliPath", "termvox");
+    const cliPath = resolveCliPath(vscode.workspace.getConfiguration("termvox").get("cliPath", "termvox"));
     try {
         const { stdout } = await execFileAsync(cliPath, ["daemon", "status"], {
             env: process.env,
