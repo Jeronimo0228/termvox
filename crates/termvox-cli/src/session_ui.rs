@@ -91,10 +91,12 @@ impl SessionUi {
     pub(crate) fn show_recording(&self) {
         match self.mode {
             AgentDisplayMode::Verbose => print!("Recording...\r"),
-            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => self.write_status(&format!(
-                "{}{} Listening…{}",
-                self.theme.accent, self.theme.prompt_glyph, self.theme.reset
-            )),
+            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => {
+                self.write_status(&format!(
+                    "{}{} Listening…{}",
+                    self.theme.accent, self.theme.prompt_glyph, self.theme.reset
+                ))
+            }
         }
         let _ = io::stdout().flush();
     }
@@ -105,10 +107,12 @@ impl SessionUi {
                 print!("\rTranscribing...\r");
                 let _ = io::stdout().flush();
             }
-            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => self.write_status(&format!(
-                "{}{} Transcribing…{}",
-                self.theme.accent, self.theme.prompt_glyph, self.theme.reset
-            )),
+            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => {
+                self.write_status(&format!(
+                    "{}{} Transcribing…{}",
+                    self.theme.accent, self.theme.prompt_glyph, self.theme.reset
+                ))
+            }
         }
     }
 
@@ -135,10 +139,12 @@ impl SessionUi {
                 print!("\rPartial: {preview}\r");
                 let _ = io::stdout().flush();
             }
-            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => self.write_status(&format!(
-                "{}{} {preview}…{}",
-                self.theme.accent, self.theme.prompt_glyph, self.theme.reset
-            )),
+            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => {
+                self.write_status(&format!(
+                    "{}{} {preview}…{}",
+                    self.theme.accent, self.theme.prompt_glyph, self.theme.reset
+                ))
+            }
         }
     }
 
@@ -257,10 +263,12 @@ impl SessionUi {
     pub(crate) fn show_confirm_prompt(&self) -> String {
         match self.mode {
             AgentDisplayMode::Verbose => "Send to agent? [y/N] ".into(),
-            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => format!(
-                "{}{} Send? [y/N] {}",
-                self.theme.accent, self.theme.prompt_glyph, self.theme.reset
-            ),
+            AgentDisplayMode::Branded | AgentDisplayMode::Companion | AgentDisplayMode::Shell => {
+                format!(
+                    "{}{} Send? [y/N] {}",
+                    self.theme.accent, self.theme.prompt_glyph, self.theme.reset
+                )
+            }
         }
     }
 

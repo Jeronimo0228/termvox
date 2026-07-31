@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use termvox_core::AgentInvocationOptions;
 
-use crate::{interactive_resume_args, SupportedAgent};
+use crate::{SupportedAgent, interactive_resume_args};
 
 /// Command line used to spawn an upstream agent TUI inside a PTY.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,7 +88,12 @@ mod tests {
             &[],
             Some("ses_abc"),
         );
-        assert!(launch.args.windows(2).any(|pair| pair == ["--session", "ses_abc"]));
+        assert!(
+            launch
+                .args
+                .windows(2)
+                .any(|pair| pair == ["--session", "ses_abc"])
+        );
     }
 
     #[test]

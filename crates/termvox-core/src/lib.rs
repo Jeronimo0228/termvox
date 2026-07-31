@@ -9,8 +9,8 @@ mod hints;
 mod performance;
 mod pipeline;
 mod policy;
-mod sessions;
 mod session_store;
+mod sessions;
 
 pub use agents::*;
 pub use auth::*;
@@ -21,8 +21,8 @@ pub use hints::*;
 pub use performance::*;
 pub use pipeline::*;
 pub use policy::*;
-pub use sessions::*;
 pub use session_store::*;
+pub use sessions::*;
 
 use thiserror::Error;
 

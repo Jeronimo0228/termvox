@@ -1,7 +1,11 @@
 //! Safe, streaming subprocess adapters for supported coding-agent CLIs.
 #![allow(clippy::too_many_lines)]
 
-use std::{path::{Path, PathBuf}, process::Stdio, time::Duration};
+use std::{
+    path::{Path, PathBuf},
+    process::Stdio,
+    time::Duration,
+};
 
 use async_trait::async_trait;
 use termvox_core::{
@@ -266,13 +270,7 @@ impl AgentAdapter for CliAgent {
         };
         let installed = path.is_some();
         let auth = if installed {
-            Some(
-                check_auth(
-                    self.kind,
-                    path.as_deref().unwrap_or(&self.executable),
-                )
-                .await,
-            )
+            Some(check_auth(self.kind, path.as_deref().unwrap_or(&self.executable)).await)
         } else {
             None
         };
@@ -437,7 +435,9 @@ fn parse_line(kind: SupportedAgent, line: &str) -> Option<AgentEvent> {
 #[must_use]
 pub fn extract_session_id(kind: SupportedAgent, line: &str) -> Option<String> {
     match parse_line(kind, line)? {
-        AgentEvent::Started { session_id: Some(id) } => Some(id),
+        AgentEvent::Started {
+            session_id: Some(id),
+        } => Some(id),
         _ => None,
     }
 }

@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use termvox_agents::{discover_remote_session, SupportedAgent};
+use termvox_agents::{SupportedAgent, discover_remote_session};
 use termvox_core::{AgentKind, AgentSession, AppConfig, WorkspaceSession};
 
 #[must_use]

@@ -37,10 +37,7 @@ impl WorkspaceSession {
 
     #[must_use]
     pub fn session_path(cwd: &Path, relative: Option<&Path>) -> PathBuf {
-        relative.map_or_else(
-            || cwd.join(".termvox/session.json"),
-            Path::to_path_buf,
-        )
+        relative.map_or_else(|| cwd.join(".termvox/session.json"), Path::to_path_buf)
     }
 
     /// Load a workspace session from disk when present and compatible.
@@ -76,9 +73,8 @@ impl WorkspaceSession {
         }
         let payload = serde_json::to_string_pretty(self)
             .map_err(|error| TermVoxError::Config(error.to_string()))?;
-        std::fs::write(path, payload).map_err(|error| {
-            TermVoxError::Config(format!("write {}: {error}", path.display()))
-        })
+        std::fs::write(path, payload)
+            .map_err(|error| TermVoxError::Config(format!("write {}: {error}", path.display())))
     }
 
     pub fn touch_remote_id(&mut self, remote_id: impl Into<String>) {
@@ -109,9 +105,7 @@ mod tests {
         let mut session = WorkspaceSession::new(AgentKind::Cursor, dir.clone());
         session.touch_remote_id("sess_abc");
         session.save(&path).expect("save");
-        let loaded = WorkspaceSession::load(&path)
-            .expect("load")
-            .expect("some");
+        let loaded = WorkspaceSession::load(&path).expect("load").expect("some");
         assert_eq!(loaded.remote_id.as_deref(), Some("sess_abc"));
         assert_eq!(loaded.agent, AgentKind::Cursor);
         let _ = std::fs::remove_dir_all(dir);

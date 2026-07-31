@@ -53,24 +53,19 @@ fn check_claude_auth() -> AgentAuthStatus {
     if file_nonempty(&home_path(".claude/.credentials.json")) {
         return AgentAuthStatus::authenticated("Claude credentials file present");
     }
-    AgentAuthStatus::unauthenticated(
-        "Claude Code is not authenticated",
-        "claude login",
-    )
+    AgentAuthStatus::unauthenticated("Claude Code is not authenticated", "claude login")
 }
 
 fn check_codex_auth() -> AgentAuthStatus {
     if env_set("OPENAI_API_KEY") {
         return AgentAuthStatus::authenticated("OPENAI_API_KEY is set");
     }
-    if file_nonempty(&home_path(".codex/auth.json")) || file_nonempty(&home_path(".config/codex/auth.json"))
+    if file_nonempty(&home_path(".codex/auth.json"))
+        || file_nonempty(&home_path(".config/codex/auth.json"))
     {
         return AgentAuthStatus::authenticated("Codex credentials file present");
     }
-    AgentAuthStatus::unauthenticated(
-        "Codex CLI is not authenticated",
-        "codex login",
-    )
+    AgentAuthStatus::unauthenticated("Codex CLI is not authenticated", "codex login")
 }
 
 fn check_cursor_auth() -> AgentAuthStatus {
@@ -88,14 +83,12 @@ fn check_gemini_auth() -> AgentAuthStatus {
     if env_any(&["GEMINI_API_KEY", "GOOGLE_API_KEY"]) {
         return AgentAuthStatus::authenticated("Gemini API key in environment");
     }
-    if file_nonempty(&home_path(".gemini/auth.json")) || file_nonempty(&config_path("gemini/auth.json"))
+    if file_nonempty(&home_path(".gemini/auth.json"))
+        || file_nonempty(&config_path("gemini/auth.json"))
     {
         return AgentAuthStatus::authenticated("Gemini credentials file present");
     }
-    AgentAuthStatus::unauthenticated(
-        "Gemini CLI is not authenticated",
-        "gemini auth login",
-    )
+    AgentAuthStatus::unauthenticated("Gemini CLI is not authenticated", "gemini auth login")
 }
 
 fn check_aider_auth() -> AgentAuthStatus {
@@ -156,13 +149,10 @@ fn looks_like_auth_list(output: &str) -> bool {
 }
 
 async fn run_command(executable: &Path, args: &[&str]) -> Option<String> {
-    let output = tokio::time::timeout(
-        PROBE_TIMEOUT,
-        Command::new(executable).args(args).output(),
-    )
-    .await
-    .ok()?
-    .ok()?;
+    let output = tokio::time::timeout(PROBE_TIMEOUT, Command::new(executable).args(args).output())
+        .await
+        .ok()?
+        .ok()?;
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
     if stdout.is_empty() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();

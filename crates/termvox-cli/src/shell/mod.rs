@@ -21,12 +21,12 @@ use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind},
     terminal::{self, ClearType},
 };
-use portable_pty::{native_pty_system, CommandBuilder, PtySize};
-use termvox_agents::{extract_session_id, scan_output_for_session_id, InteractiveLaunch, SupportedAgent};
-use termvox_audio::AudioRecorder;
-use termvox_core::{
-    agent_ui, AgentAdapter, AgentKind, AppConfig, SpeechEngine,
+use portable_pty::{CommandBuilder, PtySize, native_pty_system};
+use termvox_agents::{
+    InteractiveLaunch, SupportedAgent, extract_session_id, scan_output_for_session_id,
 };
+use termvox_audio::AudioRecorder;
+use termvox_core::{AgentAdapter, AgentKind, AppConfig, SpeechEngine, agent_ui};
 
 use crate::workspace;
 use tokio_util::sync::CancellationToken;
@@ -75,15 +75,7 @@ pub async fn run(
     let config = Arc::new(config);
     let supported = to_supported(agent);
     tokio::task::spawn_blocking(move || {
-        run_session(
-            &config,
-            agent,
-            supported,
-            &launch,
-            &speech,
-            &cwd,
-            remote_id,
-        )
+        run_session(&config, agent, supported, &launch, &speech, &cwd, remote_id)
     })
     .await
     .context("shell session task failed")?
@@ -127,8 +119,7 @@ fn run_session(
     }
     bar.draw()?;
 
-    let mut workspace_session =
-        termvox_core::WorkspaceSession::new(agent, cwd.to_path_buf());
+    let mut workspace_session = termvox_core::WorkspaceSession::new(agent, cwd.to_path_buf());
     workspace_session.remote_id = resumed_remote_id;
     let captured_remote = Arc::new(Mutex::new(workspace_session.remote_id.clone()));
 
@@ -219,12 +210,7 @@ fn run_session(
         }
 
         if config.workspace.persist_session && last_persist.elapsed() >= Duration::from_secs(15) {
-            workspace::persist_remote_id(
-                config,
-                agent,
-                cwd,
-                workspace_session.remote_id.clone(),
-            );
+            workspace::persist_remote_id(config, agent, cwd, workspace_session.remote_id.clone());
             last_persist = Instant::now();
         }
 
@@ -346,12 +332,7 @@ fn run_session(
     let _ = copy_agent.join();
     let _ = child.lock().expect("child mutex").kill();
     if config.workspace.persist_session {
-        workspace::persist_remote_id(
-            config,
-            agent,
-            cwd,
-            workspace_session.remote_id.clone(),
-        );
+        workspace::persist_remote_id(config, agent, cwd, workspace_session.remote_id.clone());
     }
     bar.set_state(BarState::Exiting);
     bar.draw()?;
@@ -387,15 +368,7 @@ fn toggle_voice(
 ) -> Result<()> {
     if let Some(recorder_handle) = recorder.take() {
         let audio = rt.block_on(recorder_handle.stop())?;
-        handle_finished_recording(
-            config,
-            speech,
-            rt,
-            bar,
-            writer,
-            awaiting_confirm,
-            audio,
-        )?;
+        handle_finished_recording(config, speech, rt, bar, writer, awaiting_confirm, audio)?;
     } else {
         *recorder = Some(AudioRecorder::start(&config.audio)?);
         bar.set_state(BarState::Recording);

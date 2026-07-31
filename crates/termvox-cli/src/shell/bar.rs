@@ -3,9 +3,8 @@
 use std::io::{self, Write};
 
 use crossterm::{
-    cursor,
+    ExecutableCommand, cursor,
     style::{Attribute, Print, SetAttribute},
-    ExecutableCommand,
 };
 use termvox_core::AgentUiTheme;
 

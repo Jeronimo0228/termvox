@@ -55,10 +55,6 @@ jobs:
         run: npm test
       - run: TERMVOX_SKIP_BINARY_INSTALL=1 npm pack
       - name: Publish to npm (OIDC trusted publishing)
-        run: npm publish --access public --tag alpha
-      - name: Promote published version to latest dist-tag
-        run: npm dist-tag add "termvox@$(node -p "require('./package.json').version")" latest
-        env:
-          NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+        run: npm publish --access public --tag latest
         env:
           NPM_CONFIG_REGISTRY: https://registry.npmjs.org/

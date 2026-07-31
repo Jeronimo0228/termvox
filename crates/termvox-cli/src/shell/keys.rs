@@ -44,7 +44,9 @@ pub fn is_shell_exit(event: &KeyEvent, specification: &str) -> bool {
         return true;
     }
     // Linux TTYs often deliver Ctrl+\ as ASCII FS (0x1c) without CONTROL set.
-    if specification.replace(' ', "").eq_ignore_ascii_case("Ctrl+\\")
+    if specification
+        .replace(' ', "")
+        .eq_ignore_ascii_case("Ctrl+\\")
         && matches!(event.kind, KeyEventKind::Press | KeyEventKind::Repeat)
         && event.code == KeyCode::Char('\x1c')
     {
@@ -58,13 +60,19 @@ pub fn is_shell_exit(event: &KeyEvent, specification: &str) -> bool {
 pub fn shell_voice_hotkeys(config: &termvox_core::AppConfig) -> Vec<String> {
     let mut hotkeys = vec![config.shell.hotkey.clone()];
     for alt in &config.shell.alt_hotkeys {
-        if !hotkeys.iter().any(|existing| existing.eq_ignore_ascii_case(alt)) {
+        if !hotkeys
+            .iter()
+            .any(|existing| existing.eq_ignore_ascii_case(alt))
+        {
             hotkeys.push(alt.clone());
         }
     }
     if termvox_core::detect_environment().wayland {
         for fallback in ["Ctrl+Space", "F9"] {
-            if !hotkeys.iter().any(|existing| existing.eq_ignore_ascii_case(fallback)) {
+            if !hotkeys
+                .iter()
+                .any(|existing| existing.eq_ignore_ascii_case(fallback))
+            {
                 hotkeys.push(fallback.into());
             }
         }
