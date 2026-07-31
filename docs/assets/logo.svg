@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="TermVox">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2ec4b6"/>
+      <stop offset="100%" stop-color="#3dd6c6"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#141820"/>
+  <rect x="1" y="1" width="62" height="62" rx="13" fill="none" stroke="#2a3544"/>
+  <path d="M18 42 L24 30 L30 38 L36 26 L42 34 L48 28" fill="none" stroke="url(#g)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <rect x="27" y="18" width="10" height="16" rx="5" fill="none" stroke="#eef3f8" stroke-width="2"/>
+  <path d="M24 34 Q32 40 40 34" fill="none" stroke="#eef3f8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="32" y1="40" x2="32" y2="44" stroke="#eef3f8" stroke-width="2" stroke-linecap="round"/>
+  <text x="14" y="24" fill="#3dd6c6" font-family="ui-monospace, monospace" font-size="11" font-weight="700">&gt;_</text>
+</svg>

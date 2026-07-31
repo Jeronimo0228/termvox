@@ -103,7 +103,7 @@ por línea en stdout. Variables de entorno solo las listadas en `env_allowlist`.
 ## Shell integrado (`termvox shell`)
 
 - **Barra desaparece** — los TUI del agente redibujan; TermVox redibuja la barra.
-  Actualiza a alpha.8+.
+  Actualiza a la última versión (alpha.10 o superior).
 - **F8 no funciona en Wayland** — usa **Ctrl+Space** (`[shell].alt_hotkeys`) o
   `termvox daemon start` para hotkey global.
 - **No puedo salir** — **Ctrl+\\** (`[shell].exit_hotkey`), no Ctrl+C.

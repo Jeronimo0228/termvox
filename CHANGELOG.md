@@ -10,6 +10,19 @@ in minor or patch increments and must be called out explicitly.
 
 ## [Unreleased]
 
+## [0.1.0-alpha.10] - 2026-07-31
+
+### Fixed
+
+- CI: synchronized `Cargo.lock` with workspace version; rustfmt across agents/cli crates
+- npm publish workflow: publish directly with `--tag latest` (OIDC cannot run `dist-tag`)
+
+### Changed
+
+- README and docs refreshed for alpha.10, npm install path, and release artifacts
+
+[0.1.0-alpha.10]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.9...v0.1.0-alpha.10
+
 ## [0.1.0-alpha.9] - 2026-07-31
 
 ### Added

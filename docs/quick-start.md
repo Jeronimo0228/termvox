@@ -1,6 +1,7 @@
 # Quick start
 
-TermVox **0.1.0-alpha.8** ships pre-built binaries for Linux, macOS, and Windows on
+TermVox **0.1.0-alpha.10** is available on [npm](https://www.npmjs.com/package/termvox)
+and as pre-built binaries for Linux, macOS, and Windows on
 [GitHub Releases](https://github.com/Jeronimo0228/termvox/releases). You can also
 build from source.
 
@@ -23,7 +24,7 @@ curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/i
 Pin a version:
 
 ```bash
-TERMVOX_VERSION=v0.1.0-alpha.8 curl -fsSL .../scripts/install.sh | bash
+TERMVOX_VERSION=v0.1.0-alpha.10 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
 ```
 
 **From source:**

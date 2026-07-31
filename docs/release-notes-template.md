@@ -1,20 +1,18 @@
-## TermVox v0.1.0-alpha.8 — doctor hints, balanced Whisper, embedded SQLite
+## TermVox v0.1.0-alpha.10 — CI green, npm latest, docs refresh
 
-Pin: `TERMVOX_VERSION=v0.1.0-alpha.8`
+Pin: `TERMVOX_VERSION=v0.1.0-alpha.10`
 
-### What's new in alpha.8
+### What's new in alpha.10
 
-- OpenCode session discovery uses embedded SQLite (no `sqlite3` in PATH)
-- `balanced` performance profile maps to `ggml-base.bin`
-- `termvox doctor` prints contextual hints (shell vs companion, Wayland, models)
-- Interactive setup can default Cursor/OpenCode to integrated shell
-- CI shell-smoke job; Spanish CLI reference and troubleshooting docs
-- Packaging notes for Homebrew, `.deb`, and Flatpak contributors
+- npm `latest` dist-tag points at hardened alpha.10 (Trusted Publishing / OIDC)
+- CI lockfile and rustfmt fixes; all workflows passing on tag push
+- README and documentation updated for npm-first install and current release artifacts
 
 ### Upgrade
 
 ```bash
-TERMVOX_VERSION=v0.1.0-alpha.8 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
-termvox models install accurate   # if using balanced/accurate profile
+npm install -g termvox@latest
+# or
+TERMVOX_VERSION=v0.1.0-alpha.10 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
 termvox doctor
 ```

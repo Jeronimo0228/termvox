@@ -1,6 +1,6 @@
 # Compatibility
 
-TermVox is `0.1.0-alpha.1`. Compatibility claims below describe source
+TermVox is `0.1.0-alpha.10`. Compatibility claims below describe source
 implementations, not a completed release certification matrix.
 
 ## Operating systems

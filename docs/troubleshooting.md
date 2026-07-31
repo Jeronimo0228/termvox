@@ -111,7 +111,7 @@ explicitly without putting secret values in TOML.
 ## Integrated shell (`termvox shell`)
 
 - **Mic bar disappears** — upstream TUIs redraw the screen; TermVox redraws the bar
-  continuously. If it still vanishes, update to alpha.8.
+  continuously. If it still vanishes, update to the latest release (currently alpha.10).
 - **F8 does nothing on Wayland** — use **Ctrl+Space** (`[shell].alt_hotkeys`) or
   configure a global hotkey via the daemon.
 - **Cannot exit shell** — use **Ctrl+\\** (`[shell].exit_hotkey`), not Ctrl+C.

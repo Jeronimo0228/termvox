@@ -1,14 +1,55 @@
-# TermVox
+<p align="center">
+  <img src="docs/assets/logo.svg" alt="TermVox logo" width="64" height="64">
+</p>
 
-TermVox is a voice interface for terminal coding agents. It records an
-utterance, transcribes it, shows the resulting prompt, and sends it to a
-selected agent only after the configured confirmation policy allows it.
+<h1 align="center">TermVox</h1>
 
-> **Project status:** TermVox is alpha software (`0.1.0-alpha.8`) with published
-> multi-platform releases. It includes adapters for Codex, Claude, Cursor,
-> Gemini, Aider, Amp, and OpenCode; embedded local Whisper and optional OpenAI
-> transcription; workspace session resume; and the integrated agent shell. Run
-> `termvox doctor` after installing or upgrading upstream agent CLIs.
+<p align="center">
+  <strong>Voice interface for terminal coding agents</strong>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/termvox"><img src="https://img.shields.io/npm/v/termvox?label=npm&color=cb3837" alt="npm version"></a>
+  <a href="https://github.com/Jeronimo0228/termvox/actions/workflows/ci.yml"><img src="https://github.com/Jeronimo0228/termvox/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE-MIT"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue" alt="License"></a>
+  <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/rust-1.88%2B-orange" alt="Rust 1.88+"></a>
+</p>
+
+<p align="center">
+  <img src="docs/assets/banner.svg" alt="TermVox stack: Rust, Whisper.cpp, CPAL, npm, Node.js, TOML · Linux, macOS, Windows · MIT OR Apache-2.0" width="100%">
+</p>
+
+<p align="center">
+  <a href="docs/agents.md"><img src="https://img.shields.io/badge/agent-Codex-10a37f?style=flat-square&logo=openai&logoColor=white" alt="Codex"></a>
+  <a href="docs/agents.md"><img src="https://img.shields.io/badge/agent-Claude%20Code-d4a27a?style=flat-square" alt="Claude Code"></a>
+  <a href="docs/agents.md"><img src="https://img.shields.io/badge/agent-Cursor-0078d4?style=flat-square" alt="Cursor"></a>
+  <a href="docs/agents.md"><img src="https://img.shields.io/badge/agent-Gemini-4285f4?style=flat-square&logo=google&logoColor=white" alt="Gemini"></a>
+  <a href="docs/agents.md"><img src="https://img.shields.io/badge/agent-Aider-7c3aed?style=flat-square" alt="Aider"></a>
+  <a href="docs/agents.md"><img src="https://img.shields.io/badge/agent-Amp-6366f1?style=flat-square" alt="Amp"></a>
+  <a href="docs/agents.md"><img src="https://img.shields.io/badge/agent-OpenCode-334155?style=flat-square" alt="OpenCode"></a>
+</p>
+
+<p align="center">
+TermVox adds a microphone layer to the coding agents you already run in the terminal.
+Speak naturally, review the transcript, and send — with <strong>local Whisper</strong> transcription
+and a <strong>confirmation gate</strong> before anything reaches an upstream CLI.
+</p>
+
+<p align="center">
+  <code>npm install -g termvox && termvox shell</code>
+</p>
+
+> **Alpha (`0.1.0-alpha.10`).** APIs, config, and adapters may change between releases.
+> Run `termvox doctor` after installing or upgrading upstream agent CLIs.
+
+## How it works
+
+1. **Record** — push-to-talk in `termvox shell`, or hold Space in companion mode.
+2. **Transcribe** — Whisper runs locally by default; no speech API key required.
+3. **Confirm** — review the prompt; TermVox sends it only when your policy allows.
+
+The integrated **agent shell** keeps the upstream TUI (Cursor, OpenCode, Claude, etc.)
+in a PTY with a persistent mic bar — no second terminal, no paste workflow.
 
 ## Quick start
 
@@ -25,6 +66,12 @@ termvox-editor-install   # optional Cursor/VS Code extension
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
+```
+
+Pin a release:
+
+```bash
+TERMVOX_VERSION=v0.1.0-alpha.10 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
 ```
 
 **From source** — install [Rust 1.88 or later](https://www.rust-lang.org/tools/install), audio
@@ -86,13 +133,13 @@ auth for each agent. See the [compatibility notes](docs/compatibility.md).
 
 - [Quick start](docs/quick-start.md) · [Inicio rápido en español](docs/es/quick-start.md)
 - [Agent shell](docs/agent-shell.md) · [Coding agents](docs/agents.md)
-- [Installation](docs/installation.md) · [npm install](docs/npm.md)
+- [Installation](docs/installation.md) · [npm install](docs/npm.md) · [npm security](docs/npm-security.md)
 - [Speech engines](docs/speech-engines.md)
 - [Configuration](docs/configuration.md) · [CLI reference](docs/cli-reference.md)
 - [Privacy and security](docs/privacy-security.md)
 - [Architecture](docs/architecture.md) · [Plugin protocol](docs/plugin-system.md)
 - [Troubleshooting](docs/troubleshooting.md) · [Compatibility](docs/compatibility.md) · [FAQ](docs/faq.md)
-- [Roadmap](docs/roadmap.md) · [mdBook navigation](docs/SUMMARY.md)
+- [Roadmap](docs/roadmap.md) · [Changelog](CHANGELOG.md) · [mdBook navigation](docs/SUMMARY.md)
 
 ## Community
 
