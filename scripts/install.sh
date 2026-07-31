@@ -124,4 +124,5 @@ echo "Quick start:"
 echo "  termvox daemon start --background"
 echo "  # focus Cursor Agent, then Alt+Space or: termvox talk"
 echo
-echo "Optional: install the VS Code / Cursor extension from extensions/vscode-termvox/"
+echo "Optional: install the VS Code / Cursor extension from extensions/vscode-termvox/
+(or after npm install: termvox-editor-install)"

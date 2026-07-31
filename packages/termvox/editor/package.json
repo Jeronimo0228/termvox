@@ -1,0 +1,66 @@
+{
+  "name": "termvox-editor-extension",
+  "private": true,
+  "displayName": "TermVox",
+  "description": "Voice prompts for Cursor and other coding agents via TermVox.",
+  "version": "0.1.0-alpha.8",
+  "publisher": "termvox",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "termvox.talk",
+        "title": "TermVox: Talk",
+        "icon": "$(mic)"
+      },
+      {
+        "command": "termvox.daemonStart",
+        "title": "TermVox: Start Daemon"
+      },
+      {
+        "command": "termvox.daemonStop",
+        "title": "TermVox: Stop Daemon"
+      },
+      {
+        "command": "termvox.daemonStatus",
+        "title": "TermVox: Daemon Status"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "termvox.talk",
+        "key": "alt+space",
+        "when": "editorTextFocus"
+      }
+    ],
+    "configuration": {
+      "title": "TermVox",
+      "properties": {
+        "termvox.cliPath": {
+          "type": "string",
+          "default": "termvox",
+          "description": "Path to the termvox executable."
+        },
+        "termvox.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show TermVox microphone status in the status bar."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  }
+}

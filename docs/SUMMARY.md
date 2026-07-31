@@ -2,6 +2,7 @@
 
 - [Quick start](quick-start.md)
 - [Installation](installation.md)
+- [npm installation](npm.md)
 - [Coding agents](agents.md)
 - [Agent shell](agent-shell.md)
 - [Speech engines](speech-engines.md)

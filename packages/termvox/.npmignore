@@ -1,0 +1,7 @@
+vendor/
+.cache/
+test/fixtures/
+editor/node_modules/
+editor/src/
+editor/tsconfig.json
+editor/.vscodeignore

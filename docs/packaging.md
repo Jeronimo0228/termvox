@@ -5,7 +5,17 @@ TermVox ships official binaries via GitHub Releases and `cargo-dist` (see
 paths below are documented for contributors, not maintained install channels
 yet.
 
-## Official install script
+## Official install paths
+
+### npm (recommended)
+
+```bash
+npm install -g termvox
+```
+
+See [npm.md](../docs/npm.md) for bootstrap behavior, editor extension, and CI skip flags.
+
+### Install script
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash

@@ -1,0 +1,57 @@
+{
+  "name": "termvox",
+  "version": "0.1.0-alpha.8",
+  "description": "Voice-driven bridge for coding-agent CLIs — shell, daemon, Whisper, and editor integration",
+  "license": "MIT",
+  "author": "Jeronimo Restrepo Angel",
+  "homepage": "https://github.com/Jeronimo0228/termvox#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jeronimo0228/termvox.git",
+    "directory": "packages/termvox"
+  },
+  "bugs": {
+    "url": "https://github.com/Jeronimo0228/termvox/issues"
+  },
+  "keywords": [
+    "voice",
+    "speech-to-text",
+    "cli",
+    "cursor",
+    "claude",
+    "codex",
+    "whisper",
+    "coding-agent"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "bin": {
+    "termvox": "bin/termvox.js",
+    "termvox-editor-install": "bin/install-editor.js"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "scripts",
+    "editor/package.json",
+    "editor/out",
+    "README.md"
+  ],
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js",
+    "prepublishOnly": "npm run build:editor",
+    "build:editor": "npm run compile --prefix editor",
+    "compile": "npm run compile --prefix editor",
+    "test": "node --test test/*.test.js"
+  }
+}

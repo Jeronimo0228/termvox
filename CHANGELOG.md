@@ -10,6 +10,12 @@ in minor or patch increments and must be called out explicitly.
 
 ## [Unreleased]
 
+### Added
+
+- npm package `termvox` — downloads native CLI on postinstall, bootstraps Whisper
+  model and config, bundles Cursor/VS Code extension (`termvox-editor-install`)
+- CI jobs for npm pack/test and publish workflow (`NPM_TOKEN`)
+
 ## [0.1.0-alpha.8] - 2026-07-30
 
 ### Added

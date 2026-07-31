@@ -1,0 +1,12 @@
+{
+  "name": "termvox-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/termvox"
+  ],
+  "scripts": {
+    "build:editor": "npm run compile --workspace termvox",
+    "pack:termvox": "npm pack --workspace termvox",
+    "test:npm": "npm test --workspace termvox"
+  }
+}

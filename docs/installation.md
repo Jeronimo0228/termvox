@@ -2,6 +2,19 @@
 
 ## Quick install (recommended)
 
+### npm
+
+```bash
+npm install -g termvox
+termvox doctor
+```
+
+Downloads the native binary for your OS, installs the default Whisper model, and
+creates a starter config. See [npm.md](npm.md) for project-local install, editor
+extension, and skip flags.
+
+### Shell script
+
 Pre-built binaries are published on [GitHub Releases](https://github.com/Jeronimo0228/termvox/releases).
 No Rust toolchain is required:
 
