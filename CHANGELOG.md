@@ -10,13 +10,20 @@ in minor or patch increments and must be called out explicitly.
 
 ## [Unreleased]
 
+## [0.1.0-alpha.9] - 2026-07-31
+
 ### Added
 
-- npm package `termvox` — downloads native CLI on postinstall, bootstraps Whisper
-  model and config, bundles Cursor/VS Code extension (`termvox-editor-install`)
-- CI jobs for npm pack/test and publish workflow (`NPM_TOKEN`)
-- Supply-chain hardening for npm: mandatory SHA-256, GitHub URL allowlist, removed
-  `TERMVOX_INSTALL_REPO` override, editor `cliPath` validation, `docs/npm-security.md`
+- npm package `termvox` on registry.npmjs.org with postinstall binary bootstrap
+- Supply-chain controls: mandatory SHA-256, GitHub URL allowlist, `docs/npm-security.md`
+- Trusted Publishing (OIDC) workflow `publish-npm.yml`
+
+### Security
+
+- Removed `TERMVOX_INSTALL_REPO` override from npm installer
+- Editor extension validates `termvox.cliPath` for shell metacharacters
+
+[0.1.0-alpha.9]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.8...v0.1.0-alpha.9
 
 ## [0.1.0-alpha.8] - 2026-07-30
 
@@ -72,7 +79,7 @@ in minor or patch increments and must be called out explicitly.
 - Mic bar redraw during transcribing and after upstream TUI repaints
 - Clippy and docs for workspace session store APIs
 
-[Unreleased]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.8...main
+[Unreleased]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.9...main
 [0.1.0-alpha.8]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.7...v0.1.0-alpha.8
 [0.1.0-alpha.7]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.6...v0.1.0-alpha.7
 
