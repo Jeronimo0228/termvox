@@ -50,16 +50,25 @@ async function extractArchive(archivePath, destinationDir, target) {
  * @param {string} binaryPath
  * @param {string} target
  */
-async function moveBinary(extractedDir, binaryPath, target) {
+async function moveBinary(extractedDir, destBinaryPath, target) {
   const fileName = target.includes("windows") ? "termvox.exe" : "termvox";
   const source = path.join(extractedDir, fileName);
-  if (!fs.existsSync(source)) {
+  const resolvedSource = path.resolve(source);
+  const resolvedRoot = path.resolve(extractedDir);
+  if (
+    resolvedSource !== resolvedRoot &&
+    !resolvedSource.startsWith(`${resolvedRoot}${path.sep}`)
+  ) {
+    throw new Error("archive path traversal blocked");
+  }
+  if (!fs.existsSync(resolvedSource)) {
     throw new Error(`expected binary missing in archive: ${fileName}`);
   }
-  await fs.promises.mkdir(path.dirname(binaryPath), { recursive: true });
-  await fs.promises.copyFile(source, binaryPath);
+  const resolvedDest = path.resolve(destBinaryPath);
+  await fs.promises.mkdir(path.dirname(resolvedDest), { recursive: true });
+  await fs.promises.copyFile(resolvedSource, resolvedDest);
   if (process.platform !== "win32") {
-    await fs.promises.chmod(binaryPath, 0o755);
+    await fs.promises.chmod(resolvedDest, 0o755);
   }
 }
 

@@ -16,7 +16,7 @@ async function main() {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`termvox: install failed — ${message}`);
     console.error(
-      "Fallback: curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash",
+      "See https://github.com/Jeronimo0228/termvox/blob/main/docs/npm.md#security",
     );
     process.exit(1);
   }

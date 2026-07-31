@@ -51,9 +51,10 @@ install: **Extensions → Install from Location** →
 | `TERMVOX_SKIP_BINARY_INSTALL=1` | Do not download the native binary (CI/packaging) |
 | `TERMVOX_SKIP_BOOTSTRAP=1` | Skip Whisper model download and `termvox init` |
 | `TERMVOX_NPM_PRESET=opencode` | Preset for first-time init |
-| `TERMVOX_INSTALL_REPO=owner/repo` | Alternate GitHub release source |
 
-Example for air-gapped or custom binary path:
+See [npm-security.md](npm-security.md) for supply-chain controls.
+
+Example for air-gapped install:
 
 ```bash
 TERMVOX_SKIP_BINARY_INSTALL=1 npm install -g termvox
@@ -62,10 +63,37 @@ TERMVOX_SKIP_BINARY_INSTALL=1 npm install -g termvox
 
 ## Publish (maintainers)
 
-1. Create an npm account and organization if needed
-2. Add repository secret `NPM_TOKEN` (Automation token with publish)
-3. Push a release tag `v*` — workflows `Publish release` and `Publish npm` run
-4. Or run **Publish npm** manually from Actions with the tag input
+### First release (manual, one time)
+
+Trusted Publishing **only works after the package exists on npm**. The first
+version must be published once with `npm login` + `npm publish` from a
+maintainer machine. See [npm trusted publishers](https://docs.npmjs.com/trusted-publishers/).
+
+```bash
+npm login
+cd packages/termvox
+npm publish --access public
+```
+
+### Trusted Publishing (GitHub Actions, recommended after first release)
+
+1. Open https://www.npmjs.com/package/termvox → **Settings** → **Trusted publishing**
+2. Choose **GitHub Actions** and set:
+
+| Field | Value |
+| --- | --- |
+| Organization or user | `Jeronimo0228` |
+| Repository | `termvox` |
+| Workflow filename | `publish-npm.yml` |
+| Environment name | *(leave empty)* |
+| Allowed actions | `npm publish` |
+
+3. Push a tag `v*` or run the **Publish npm** workflow manually.
+
+The workflow uses OIDC (`id-token: write`) — no `NPM_TOKEN` secret required.
+
+Optional hardening: **Settings → Publishing access → Require 2FA and disallow tokens**
+(after Trusted Publishing works).
 
 Local dry-run:
 

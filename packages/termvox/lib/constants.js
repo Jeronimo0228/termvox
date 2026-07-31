@@ -4,6 +4,8 @@ const { readFileSync } = require("node:fs");
 const path = require("node:path");
 
 const DEFAULT_REPO = "Jeronimo0228/termvox";
+const OFFICIAL_RELEASE_OWNER = "Jeronimo0228";
+const OFFICIAL_RELEASE_REPO = "termvox";
 
 /** @returns {{ version: string, repo: string }} */
 function readPackageMeta() {
@@ -12,7 +14,7 @@ function readPackageMeta() {
   );
   return {
     version: manifest.version,
-    repo: process.env.TERMVOX_INSTALL_REPO || DEFAULT_REPO,
+    repo: DEFAULT_REPO,
   };
 }
 
@@ -23,6 +25,8 @@ function releaseTag(version) {
 
 module.exports = {
   DEFAULT_REPO,
+  OFFICIAL_RELEASE_OWNER,
+  OFFICIAL_RELEASE_REPO,
   readPackageMeta,
   releaseTag,
 };

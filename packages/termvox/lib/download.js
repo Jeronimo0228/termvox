@@ -6,35 +6,62 @@ const https = require("node:https");
 const path = require("node:path");
 const { pipeline } = require("node:stream/promises");
 const { createWriteStream } = require("node:fs");
+const { assertInitialReleaseUrl, assertRedirectUrl } = require("./trust");
+
+const USER_AGENT = "termvox-npm-installer/0.1.0";
+const MAX_REDIRECTS = 5;
 
 /**
  * @param {string} url
- * @returns {Promise<Buffer>}
+ * @param {number} redirects
+ * @returns {Promise<import("node:http").IncomingMessage>}
  */
-function fetchBuffer(url) {
+function httpsGet(url, redirects = 0) {
+  if (redirects === 0) {
+    assertInitialReleaseUrl(url);
+  } else {
+    assertRedirectUrl(url);
+  }
+  if (redirects > MAX_REDIRECTS) {
+    return Promise.reject(new Error("too many redirects"));
+  }
+
   return new Promise((resolve, reject) => {
     https
-      .get(url, { headers: { "User-Agent": "termvox-npm-installer" } }, (response) => {
+      .get(url, { headers: { "User-Agent": USER_AGENT } }, (response) => {
         if (
           response.statusCode &&
           response.statusCode >= 300 &&
           response.statusCode < 400 &&
           response.headers.location
         ) {
-          fetchBuffer(response.headers.location).then(resolve, reject);
+          const next = new URL(response.headers.location, url).toString();
+          httpsGet(next, redirects + 1).then(resolve, reject);
           return;
         }
         if (response.statusCode !== 200) {
           reject(new Error(`HTTP ${response.statusCode} for ${url}`));
           return;
         }
-        const chunks = [];
-        response.on("data", (chunk) => chunks.push(chunk));
-        response.on("end", () => resolve(Buffer.concat(chunks)));
-        response.on("error", reject);
+        resolve(response);
       })
       .on("error", reject);
   });
+}
+
+/**
+ * @param {string} url
+ * @returns {Promise<Buffer>}
+ */
+async function fetchBuffer(url) {
+  const response = await httpsGet(url);
+  const chunks = [];
+  await new Promise((resolve, reject) => {
+    response.on("data", (chunk) => chunks.push(chunk));
+    response.on("end", resolve);
+    response.on("error", reject);
+  });
+  return Buffer.concat(chunks);
 }
 
 /**
@@ -43,26 +70,8 @@ function fetchBuffer(url) {
  */
 async function downloadFile(url, destination) {
   await fs.promises.mkdir(path.dirname(destination), { recursive: true });
-  await new Promise((resolve, reject) => {
-    https
-      .get(url, { headers: { "User-Agent": "termvox-npm-installer" } }, (response) => {
-        if (
-          response.statusCode &&
-          response.statusCode >= 300 &&
-          response.statusCode < 400 &&
-          response.headers.location
-        ) {
-          downloadFile(response.headers.location, destination).then(resolve, reject);
-          return;
-        }
-        if (response.statusCode !== 200) {
-          reject(new Error(`HTTP ${response.statusCode} for ${url}`));
-          return;
-        }
-        pipeline(response, createWriteStream(destination)).then(resolve, reject);
-      })
-      .on("error", reject);
-  });
+  const response = await httpsGet(url);
+  await pipeline(response, createWriteStream(destination));
 }
 
 /**
@@ -74,13 +83,16 @@ async function verifySha256(filePath, expectedHash) {
   await pipeline(fs.createReadStream(filePath), hash);
   const digest = hash.digest("hex");
   const expected = expectedHash.trim().split(/\s+/)[0];
-  if (digest !== expected) {
-    throw new Error(`checksum mismatch for ${filePath}`);
+  if (!/^[a-f0-9]{64}$/i.test(expected)) {
+    throw new Error("checksum file has invalid format");
+  }
+  if (digest.toLowerCase() !== expected.toLowerCase()) {
+    throw new Error(`checksum mismatch for ${path.basename(filePath)}`);
   }
 }
 
 module.exports = {
-  fetchBuffer,
   downloadFile,
+  fetchBuffer,
   verifySha256,
 };

@@ -15,6 +15,8 @@ in minor or patch increments and must be called out explicitly.
 - npm package `termvox` — downloads native CLI on postinstall, bootstraps Whisper
   model and config, bundles Cursor/VS Code extension (`termvox-editor-install`)
 - CI jobs for npm pack/test and publish workflow (`NPM_TOKEN`)
+- Supply-chain hardening for npm: mandatory SHA-256, GitHub URL allowlist, removed
+  `TERMVOX_INSTALL_REPO` override, editor `cliPath` validation, `docs/npm-security.md`
 
 ## [0.1.0-alpha.8] - 2026-07-30
 

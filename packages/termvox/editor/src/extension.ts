@@ -4,6 +4,17 @@ import * as vscode from "vscode";
 
 const execFileAsync = promisify(execFile);
 
+function resolveCliPath(configured: string): string {
+  const trimmed = configured.trim();
+  if (trimmed.length === 0 || trimmed === "termvox") {
+    return "termvox";
+  }
+  if (/[\0;&|`$<>]/.test(trimmed)) {
+    throw new Error("termvox.cliPath contains unsupported characters");
+  }
+  return trimmed;
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   const status = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Right,
@@ -47,9 +58,9 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 async function runTermvox(args: string[]): Promise<void> {
-  const cliPath = vscode.workspace
-    .getConfiguration("termvox")
-    .get<string>("cliPath", "termvox");
+  const cliPath = resolveCliPath(
+    vscode.workspace.getConfiguration("termvox").get<string>("cliPath", "termvox"),
+  );
   try {
     const { stdout, stderr } = await execFileAsync(cliPath, args, {
       env: process.env,
@@ -67,9 +78,9 @@ async function runTermvox(args: string[]): Promise<void> {
 }
 
 async function daemonRunning(): Promise<boolean> {
-  const cliPath = vscode.workspace
-    .getConfiguration("termvox")
-    .get<string>("cliPath", "termvox");
+  const cliPath = resolveCliPath(
+    vscode.workspace.getConfiguration("termvox").get<string>("cliPath", "termvox"),
+  );
   try {
     const { stdout } = await execFileAsync(cliPath, ["daemon", "status"], {
       env: process.env,

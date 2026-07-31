@@ -21,6 +21,15 @@ function isInstalled(version) {
   }
 }
 
+/**
+ * @param {string} version
+ * @param {string} target
+ */
+function expectedAssetName(version, target) {
+  const extension = target.includes("windows") ? "zip" : "tar.gz";
+  return `termvox-v${version}-${target}.${extension}`;
+}
+
 async function installBinary() {
   const { version, repo } = readPackageMeta();
   if (isInstalled(version)) {
@@ -36,8 +45,7 @@ async function installBinary() {
   }
 
   const tag = releaseTag(version);
-  const extension = target.includes("windows") ? "zip" : "tar.gz";
-  const asset = `termvox-v${version}-${target}.${extension}`;
+  const asset = expectedAssetName(version, target);
   const base = `https://github.com/${repo}/releases/download/${tag}`;
   const tmp = await fs.promises.mkdtemp(path.join(os.tmpdir(), "termvox-npm-"));
 
@@ -46,14 +54,10 @@ async function installBinary() {
     console.log(`termvox: downloading ${asset} ...`);
     await downloadFile(`${base}/${asset}`, archivePath);
 
-    try {
-      const checksumPath = path.join(tmp, `${asset}.sha256`);
-      await downloadFile(`${base}/${asset}.sha256`, checksumPath);
-      const expected = await fs.promises.readFile(checksumPath, "utf8");
-      await verifySha256(archivePath, expected);
-    } catch (error) {
-      console.warn(`termvox: checksum verification skipped (${error.message})`);
-    }
+    const checksumPath = path.join(tmp, `${asset}.sha256`);
+    await downloadFile(`${base}/${asset}.sha256`, checksumPath);
+    const expected = await fs.promises.readFile(checksumPath, "utf8");
+    await verifySha256(archivePath, expected);
 
     const extractDir = path.join(tmp, "extract");
     await extractArchive(archivePath, extractDir, target);
@@ -70,4 +74,5 @@ async function installBinary() {
 module.exports = {
   installBinary,
   isInstalled,
+  expectedAssetName,
 };
