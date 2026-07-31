@@ -1,0 +1,56 @@
+name: Publish npm
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to align npm version (for example v0.1.0-alpha.8)
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: npm publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933aa5288caeca8642d134496ff6d0751061d
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - name: Resolve package version from tag
+        id: meta
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+          version="${tag#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          node -e "
+            const fs = require('fs');
+            const path = 'packages/termvox/package.json';
+            const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
+            pkg.version = process.argv[1];
+            fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
+          " "$version"
+      - name: Install editor build deps
+        run: npm install --prefix packages/termvox/editor --no-save typescript @types/node @types/vscode
+      - name: Build bundled editor extension
+        run: npm run build:editor --prefix packages/termvox
+      - name: Test npm package
+        run: npm test --prefix packages/termvox
+      - name: Pack smoke (skip binary download)
+        run: TERMVOX_SKIP_BINARY_INSTALL=1 npm pack --prefix packages/termvox
+      - name: Publish to npm
+        run: npm publish --prefix packages/termvox --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

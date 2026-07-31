@@ -12,9 +12,23 @@ selected agent only after the configured confirmation policy allows it.
 
 ## Quick start
 
-The only verified installation path in this repository is a source build.
-Install [Rust 1.88 or later](https://www.rust-lang.org/tools/install), the
-platform audio prerequisites, and one supported coding-agent CLI.
+**Recommended (npm — full CLI + bootstrap):**
+
+```bash
+npm install -g termvox
+termvox doctor
+termvox shell
+termvox-editor-install   # optional Cursor/VS Code extension
+```
+
+**Alternative (shell installer):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
+```
+
+**From source** — install [Rust 1.88 or later](https://www.rust-lang.org/tools/install), audio
+prerequisites, and one supported coding-agent CLI:
 
 ```bash
 git clone https://github.com/Jeronimo0228/termvox.git
@@ -72,7 +86,7 @@ auth for each agent. See the [compatibility notes](docs/compatibility.md).
 
 - [Quick start](docs/quick-start.md) · [Inicio rápido en español](docs/es/quick-start.md)
 - [Agent shell](docs/agent-shell.md) · [Coding agents](docs/agents.md)
-- [Installation](docs/installation.md)
+- [Installation](docs/installation.md) · [npm install](docs/npm.md)
 - [Speech engines](docs/speech-engines.md)
 - [Configuration](docs/configuration.md) · [CLI reference](docs/cli-reference.md)
 - [Privacy and security](docs/privacy-security.md)

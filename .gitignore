@@ -9,4 +9,7 @@ termvox.toml
 .env
 .DS_Store
 **/node_modules/
+packages/termvox/vendor/
+packages/termvox/.cache/
+packages/termvox/*.tgz
 *.vsix

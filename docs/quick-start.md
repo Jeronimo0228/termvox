@@ -6,7 +6,15 @@ build from source.
 
 ## 1. Install
 
-**Recommended (installer script):**
+**Recommended (npm):**
+
+```bash
+npm install -g termvox
+termvox doctor
+termvox-editor-install   # optional Cursor/VS Code mic status bar
+```
+
+**Shell installer:**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
