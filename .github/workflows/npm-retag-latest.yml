@@ -1,0 +1,25 @@
+name: Retag npm latest
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Published version to promote (for example 0.1.0-alpha.9)
+        required: true
+        default: "0.1.0-alpha.9"
+
+permissions:
+  id-token: write
+
+jobs:
+  retag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "24"
+      - run: npm install -g npm@latest
+      - name: Point latest dist-tag at version
+        run: npm dist-tag add "termvox@${{ inputs.version }}" latest
+        env:
+          NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
