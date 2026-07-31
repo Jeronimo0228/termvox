@@ -30,7 +30,7 @@ jobs:
     name: cargo deny
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Kept on a major tag because no project-owned immutable SHA is available.
       # Dependabot tracks GitHub Actions updates in this repository.
       - uses: EmbarkStudios/cargo-deny-action@v2
@@ -41,7 +41,7 @@ jobs:
     name: RustSec audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The advisory database is refreshed by the action on every run.
       - uses: rustsec/audit-check@v2
         with:
