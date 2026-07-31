@@ -55,6 +55,6 @@ jobs:
         run: npm test
       - run: TERMVOX_SKIP_BINARY_INSTALL=1 npm pack
       - name: Publish to npm (OIDC trusted publishing)
-        run: npm publish --access public --tag alpha
+        run: npm publish --access public --tag latest
         env:
           NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
