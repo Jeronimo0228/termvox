@@ -39,6 +39,16 @@ const node_child_process_1 = require("node:child_process");
 const node_util_1 = require("node:util");
 const vscode = __importStar(require("vscode"));
 const execFileAsync = (0, node_util_1.promisify)(node_child_process_1.execFile);
+function resolveCliPath(configured) {
+    const trimmed = configured.trim();
+    if (trimmed.length === 0 || trimmed === "termvox") {
+        return "termvox";
+    }
+    if (/[\0;&|`$<>]/.test(trimmed)) {
+        throw new Error("termvox.cliPath contains unsupported characters");
+    }
+    return trimmed;
+}
 function activate(context) {
     const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     status.command = "termvox.talk";

@@ -22,8 +22,10 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: actions/setup-node@49933aa5288caeca8642d134496ff6d0751061d
         with:
-          node-version: "22"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
+      - name: Use npm with trusted publishing support
+        run: npm install -g npm@11.5.1
       - name: Resolve package version from tag
         id: meta
         shell: bash
@@ -43,14 +45,11 @@ jobs:
             fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
           " "$version"
       - name: Install editor build deps
-        run: npm install --prefix packages/termvox/editor --no-save typescript @types/node @types/vscode
+        run: npm ci --prefix packages/termvox/editor
       - name: Build bundled editor extension
         run: npm run build:editor --prefix packages/termvox
       - name: Test npm package
         run: npm test --prefix packages/termvox
-      - name: Pack smoke (skip binary download)
-        run: TERMVOX_SKIP_BINARY_INSTALL=1 npm pack --prefix packages/termvox
-      - name: Publish to npm
-        run: npm publish --prefix packages/termvox --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: cd packages/termvox && TERMVOX_SKIP_BINARY_INSTALL=1 npm pack
+      - name: Publish to npm (OIDC trusted publishing)
+        run: npm publish --prefix packages/termvox --access public

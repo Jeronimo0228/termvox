@@ -143,7 +143,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install editor build deps
-        run: npm install --prefix packages/termvox/editor --no-save typescript @types/node @types/vscode
+        run: npm ci --prefix packages/termvox/editor
       - run: npm run build:editor --prefix packages/termvox
       - run: npm test --prefix packages/termvox
       - run: cd packages/termvox && TERMVOX_SKIP_BINARY_INSTALL=1 npm pack

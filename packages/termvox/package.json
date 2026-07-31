@@ -49,9 +49,13 @@
   ],
   "scripts": {
     "postinstall": "node scripts/postinstall.js",
-    "prepublishOnly": "npm run build:editor",
+    "prepublishOnly": "npm run build:editor && npm test",
     "build:editor": "npm run compile --prefix editor",
     "compile": "npm run compile --prefix editor",
     "test": "node --test test/*.test.js"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }
