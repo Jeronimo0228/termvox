@@ -136,5 +136,5 @@ the mic layer.
 
 ## Status
 
-**Stable in v0.1.0-alpha.8** — workspace session resume, localized mic bar,
+**Stable since v0.1.0-alpha.8** — workspace session resume, localized mic bar,
 streaming partial transcripts, and PTY filters for Kitty keyboard protocols.

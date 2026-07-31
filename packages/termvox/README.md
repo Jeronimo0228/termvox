@@ -48,7 +48,8 @@ Run `termvox --help` for the full list.
 | `TERMVOX_SKIP_BINARY_INSTALL=1` | Skip downloading the native binary (packaging/CI) |
 | `TERMVOX_SKIP_BOOTSTRAP=1` | Skip model download and `termvox init` |
 | `TERMVOX_NPM_PRESET=cursor` | Preset for first-time `termvox init` |
-| `TERMVOX_INSTALL_REPO=owner/repo` | Override GitHub release source |
+
+See [npm-security.md](https://github.com/Jeronimo0228/termvox/blob/main/docs/npm-security.md) for supply-chain controls.
 
 ## Requirements
 

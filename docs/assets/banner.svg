@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="200" viewBox="0 0 1200 200" role="img" aria-label="TermVox technology stack and licenses">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141820"/>
+      <stop offset="55%" stop-color="#1a2230"/>
+      <stop offset="100%" stop-color="#122028"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2ec4b6"/>
+      <stop offset="100%" stop-color="#3dd6c6"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="200" rx="16" fill="url(#bg)"/>
+  <rect x="1" y="1" width="1198" height="198" rx="15" fill="none" stroke="#2a3544" stroke-width="1"/>
+  <rect x="0" y="0" width="1200" height="3" rx="16" fill="url(#accent)"/>
+
+  <text x="48" y="72" fill="#eef3f8" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.5">TermVox</text>
+  <text x="48" y="104" fill="#8fa3b8" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="15">Voice layer for terminal coding agents</text>
+
+  <!-- Tech stack row -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="600">
+    <g transform="translate(48, 128)">
+      <rect x="0" y="0" width="72" height="28" rx="6" fill="#243041" stroke="#3a4d63"/>
+      <text x="36" y="18" fill="#c5d4e4" text-anchor="middle">Rust</text>
+    </g>
+    <g transform="translate(128, 128)">
+      <rect x="0" y="0" width="118" height="28" rx="6" fill="#243041" stroke="#3a4d63"/>
+      <text x="59" y="18" fill="#c5d4e4" text-anchor="middle">Whisper.cpp</text>
+    </g>
+    <g transform="translate(256, 128)">
+      <rect x="0" y="0" width="58" height="28" rx="6" fill="#243041" stroke="#3a4d63"/>
+      <text x="29" y="18" fill="#c5d4e4" text-anchor="middle">CPAL</text>
+    </g>
+    <g transform="translate(324, 128)">
+      <rect x="0" y="0" width="52" height="28" rx="6" fill="#243041" stroke="#3a4d63"/>
+      <text x="26" y="18" fill="#c5d4e4" text-anchor="middle">npm</text>
+    </g>
+    <g transform="translate(386, 128)">
+      <rect x="0" y="0" width="68" height="28" rx="6" fill="#243041" stroke="#3a4d63"/>
+      <text x="34" y="18" fill="#c5d4e4" text-anchor="middle">Node.js</text>
+    </g>
+    <g transform="translate(464, 128)">
+      <rect x="0" y="0" width="58" height="28" rx="6" fill="#243041" stroke="#3a4d63"/>
+      <text x="29" y="18" fill="#c5d4e4" text-anchor="middle">TOML</text>
+    </g>
+    <g transform="translate(532, 128)">
+      <rect x="0" y="0" width="62" height="28" rx="6" fill="#243041" stroke="#3a4d63"/>
+      <text x="31" y="18" fill="#c5d4e4" text-anchor="middle">Linux</text>
+    </g>
+    <g transform="translate(604, 128)">
+      <rect x="0" y="0" width="68" height="28" rx="6" fill="#243041" stroke="#3a4d63"/>
+      <text x="34" y="18" fill="#c5d4e4" text-anchor="middle">macOS</text>
+    </g>
+    <g transform="translate(682, 128)">
+      <rect x="0" y="0" width="78" height="28" rx="6" fill="#243041" stroke="#3a4d63"/>
+      <text x="39" y="18" fill="#c5d4e4" text-anchor="middle">Windows</text>
+    </g>
+    <g transform="translate(770, 128)">
+      <rect x="0" y="0" width="82" height="28" rx="6" fill="#243041" stroke="#3a4d63"/>
+      <text x="41" y="18" fill="#c5d4e4" text-anchor="middle">Sigstore</text>
+    </g>
+  </g>
+
+  <!-- License row (right) -->
+  <g font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="12" font-weight="600">
+    <g transform="translate(900, 128)">
+      <rect x="0" y="0" width="42" height="28" rx="6" fill="#1e2d24" stroke="#3d6b52"/>
+      <text x="21" y="18" fill="#8fd4a8" text-anchor="middle">MIT</text>
+    </g>
+    <g transform="translate(950, 128)">
+      <rect x="0" y="0" width="102" height="28" rx="6" fill="#1e2838" stroke="#3d5a8a"/>
+      <text x="51" y="18" fill="#9ec5ff" text-anchor="middle">Apache-2.0</text>
+    </g>
+    <g transform="translate(1060, 128)">
+      <rect x="0" y="0" width="92" height="28" rx="6" fill="#2a2438" stroke="#6b4f9a"/>
+      <text x="46" y="18" fill="#d4b8ff" text-anchor="middle">alpha.10</text>
+    </g>
+  </g>
+
+  <!-- Decorative waveform -->
+  <g filter="url(#glow)" opacity="0.85">
+    <path d="M880 56 L900 44 L920 68 L940 40 L960 64 L980 48 L1000 60" fill="none" stroke="url(#accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="1018" cy="52" r="14" fill="#1f2a36" stroke="#3dd6c6" stroke-width="2"/>
+    <rect x="1011" y="44" width="6" height="10" rx="3" fill="#3dd6c6"/>
+    <path d="M1006 58 Q1018 66 1030 58" fill="none" stroke="#3dd6c6" stroke-width="2" stroke-linecap="round"/>
+    <line x1="1018" y1="66" x2="1018" y2="74" stroke="#3dd6c6" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -7,18 +7,23 @@ plugin protocol can change.
 
 ## Where can I download a binary?
 
-This documentation does not claim that binaries are published. Build from
-source unless the canonical repository later publishes release instructions
-with verifiable artifacts.
+Three supported paths:
+
+1. **npm** (recommended): `npm install -g termvox` — downloads the matching GitHub Release binary during postinstall. See [npm installation](npm.md).
+2. **Shell installer**: `curl -fsSL .../scripts/install.sh | bash` — see [installation](installation.md).
+3. **GitHub Releases**: https://github.com/Jeronimo0228/termvox/releases — Linux, macOS, and Windows archives with per-file SHA-256 checksums.
+
+You can also build from source with `cargo install --path crates/termvox-cli`.
 
 ## Are release artifacts signed?
 
-No signing claim is made. Signing, checksums, provenance, or SBOMs must be
-verified from an actual release before relying on them.
+GitHub Release archives include **SHA-256 checksums** and **Sigstore/cosign** attestations
+(`.sigstore.json` bundles). Verify checksums before installing. npm postinstall also
+requires SHA-256 when the checksum file is present — see [npm security](npm-security.md).
 
 ## Which agents work now?
 
-Codex CLI, Claude Code, Cursor CLI, Gemini CLI, Aider, and Amp have built-in
+Codex CLI, Claude Code, Cursor CLI, Gemini CLI, Aider, Amp, and OpenCode have built-in
 adapters. Actual compatibility depends on the installed upstream version.
 
 ## Which speech engines work now?

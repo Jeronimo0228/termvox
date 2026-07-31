@@ -1,12 +1,21 @@
 # Inicio rápido
 
-TermVox **0.1.0-alpha.8** publica binarios para Linux, macOS y Windows en
+TermVox **0.1.0-alpha.10** está disponible en [npm](https://www.npmjs.com/package/termvox)
+y como binarios precompilados para Linux, macOS y Windows en
 [GitHub Releases](https://github.com/Jeronimo0228/termvox/releases). También puedes
 compilar desde el código fuente.
 
 ## Instalación
 
-**Recomendado (script):**
+**Recomendado (npm):**
+
+```bash
+npm install -g termvox
+termvox doctor
+termvox-editor-install   # extensión opcional para Cursor/VS Code
+```
+
+**Script de instalación:**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
@@ -15,7 +24,7 @@ curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/i
 Versión fija:
 
 ```bash
-TERMVOX_VERSION=v0.1.0-alpha.8 curl -fsSL .../scripts/install.sh | bash
+TERMVOX_VERSION=v0.1.0-alpha.10 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
 ```
 
 **Desde fuente:**
