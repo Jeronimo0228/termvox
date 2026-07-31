@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to align npm version (for example v0.1.0-alpha.8)
+        description: Release tag to align npm version (for example v0.1.0-alpha.9)
         required: true
 
 permissions:
@@ -18,16 +18,19 @@ jobs:
   publish:
     name: npm publish
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/termvox
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "24"
-          registry-url: "https://registry.npmjs.org"
       - name: Use npm with trusted publishing support
-        run: npm install -g npm@11.5.1
+        run: npm install -g npm@latest
       - name: Resolve package version from tag
         id: meta
+        working-directory: .
         shell: bash
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
@@ -45,11 +48,13 @@ jobs:
             fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
           " "$version"
       - name: Install editor build deps
-        run: npm ci --prefix packages/termvox/editor
+        run: npm ci --prefix editor
       - name: Build bundled editor extension
-        run: npm run build:editor --prefix packages/termvox
+        run: npm run build:editor
       - name: Test npm package
-        run: npm test --prefix packages/termvox
-      - run: cd packages/termvox && TERMVOX_SKIP_BINARY_INSTALL=1 npm pack
+        run: npm test
+      - run: TERMVOX_SKIP_BINARY_INSTALL=1 npm pack
       - name: Publish to npm (OIDC trusted publishing)
-        run: npm publish --prefix packages/termvox --access public
+        run: npm publish --access public
+        env:
+          NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
