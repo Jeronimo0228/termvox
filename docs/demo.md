@@ -50,8 +50,24 @@ termvox test --seconds 3
 | Tool | Best for |
 | --- | --- |
 | **OBS Studio** | Full screen + mic; export MP4 for LinkedIn |
+| **VHS (4K terminal cast)** | Scripted MP4 at 3840×2160 — see below |
 | **asciinema** | Terminal-only cast (`scripts/record-demo.sh --asciinema`) |
 | **Phone camera** | Acceptable if terminal text is readable |
+
+### 4K VHS render (terminal-only MP4)
+
+For a reproducible, high-resolution terminal demo without manual OBS capture:
+
+```bash
+bash scripts/render-demo-4k.sh
+```
+
+This installs [VHS](https://github.com/charmbracelet/vhs) via `go` when missing,
+requires **ffmpeg**, builds `termvox` if needed, and renders
+`docs/assets/termvox-demo-4k.mp4` from `docs/assets/termvox-demo.tape`
+(Catppuccin Mocha, 3840×2160, 60 fps). The tape runs `termvox --version`,
+`termvox doctor`, `termvox test --seconds 2`, then documents the shell
+**F8** voice flow via on-screen comment lines.
 
 Tips:
 
