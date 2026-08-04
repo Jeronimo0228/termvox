@@ -139,6 +139,7 @@ auth for each agent. See the [compatibility notes](docs/compatibility.md).
 - [Privacy and security](docs/privacy-security.md)
 - [Architecture](docs/architecture.md) · [Plugin protocol](docs/plugin-system.md)
 - [Troubleshooting](docs/troubleshooting.md) · [Compatibility](docs/compatibility.md) · [FAQ](docs/faq.md)
+- [Demo & launch prep](docs/demo.md) · [Beta checklist](docs/beta-test-checklist.md)
 - [Roadmap](docs/roadmap.md) · [Changelog](CHANGELOG.md) · [mdBook navigation](docs/SUMMARY.md)
 
 ## Community

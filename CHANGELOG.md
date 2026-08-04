@@ -10,6 +10,16 @@ in minor or patch increments and must be called out explicitly.
 
 ## [Unreleased]
 
+### Added
+
+- Launch checklist: `docs/demo.md`, beta tester checklist, LinkedIn post draft (ES)
+- `scripts/launch-smoke.sh` and `scripts/record-demo.sh` for pre-post verification
+- GitHub issue template for beta feedback
+
+### Changed
+
+- `docs/compatibility.md` aligned with npm releases, Sigstore, and alpha limitations
+
 ## [0.1.0-alpha.10] - 2026-07-31
 
 ### Fixed
