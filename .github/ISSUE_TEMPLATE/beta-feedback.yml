@@ -1,0 +1,77 @@
+name: Beta feedback
+description: Report alpha preview results from the beta test checklist
+title: "[Beta] "
+labels: ["beta", "feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying TermVox during the alpha preview.
+        Checklist: [docs/beta-test-checklist.md](https://github.com/Jeronimo0228/termvox/blob/main/docs/beta-test-checklist.md)
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: termvox_version
+    attributes:
+      label: TermVox version
+      placeholder: "0.1.0-alpha.10"
+    validations:
+      required: true
+
+  - type: input
+    id: agent
+    attributes:
+      label: Agent CLI tested
+      placeholder: "cursor / opencode / claude / codex / other"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Install method
+      options:
+        - npm install -g termvox
+        - Shell install.sh
+        - GitHub Release binary
+        - cargo install from source
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: steps
+    attributes:
+      label: What worked?
+      options:
+        - label: npm/script install
+        - label: termvox doctor (mic + whisper OK)
+        - label: termvox test (transcription)
+        - label: termvox shell + voice hotkey
+        - label: Agent received prompt after confirm
+
+  - type: textarea
+    id: blockers
+    attributes:
+      label: Blockers or errors (paste output, redact secrets)
+      placeholder: Command, expected vs actual behavior
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else?
+    validations:
+      required: false
