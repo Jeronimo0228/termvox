@@ -31,6 +31,9 @@ fi
 
 export PATH="${ROOT}/target/release:${PATH}"
 
+# VHS runs from repo root when tape is rendered via render-demo-4k.sh
+cd "$ROOT"
+
 if [[ ! -f "$TAPE" ]]; then
   echo "error: missing tape file: $TAPE" >&2
   exit 1
@@ -40,11 +43,19 @@ echo "Rendering 4K demo with vhs..."
 vhs "$TAPE"
 
 if [[ -f "$OUT" ]]; then
+  LINKEDIN="${OUT%.mp4}-linkedin.mp4"
+  echo "Stretching to ~60s for LinkedIn: $LINKEDIN"
+  ffmpeg -y -loglevel error -i "$OUT" \
+    -filter:v "setpts=3.6*PTS" -r 30 \
+    -c:v libx264 -crf 18 -preset medium -pix_fmt yuv420p \
+    "$LINKEDIN"
   echo "Created $OUT ($(du -h "$OUT" | cut -f1))"
+  echo "Created $LINKEDIN ($(du -h "$LINKEDIN" | cut -f1))"
   if command -v ffprobe >/dev/null 2>&1; then
     ffprobe -v error -select_streams v:0 \
       -show_entries stream=width,height,r_frame_rate,codec_name \
-      -of default=noprint_wrappers=1 "$OUT"
+      -of default=noprint_wrappers=1 "$LINKEDIN"
+    ffprobe -v error -show_entries format=duration -of default=nw=1:nokey=1 "$LINKEDIN"
   fi
 else
   echo "error: expected output not found: $OUT" >&2

@@ -12,9 +12,10 @@ in minor or patch increments and must be called out explicitly.
 
 ### Added
 
-- Launch checklist: `docs/demo.md`, beta tester checklist, LinkedIn post draft (ES)
-- `scripts/launch-smoke.sh` and `scripts/record-demo.sh` for pre-post verification
-- GitHub issue template for beta feedback
+- 4K VHS demo videos: `docs/assets/termvox-demo-4k.mp4` and `termvox-demo-4k-linkedin.mp4` (~59s)
+- `scripts/render-demo-4k.sh`, `scripts/vhs-demo.sh`, `docs/assets/termvox-demo.tape`
+
+### Added (launch checklist)
 
 ### Changed
 
