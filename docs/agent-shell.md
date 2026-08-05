@@ -85,11 +85,12 @@ to the agent. **Ctrl+C** is forwarded to the upstream TUI.
 
 ## Workspace sessions
 
-When `[workspace].persist_session` is enabled (default), TermVox saves the
-upstream session id to `.termvox/session.json` and passes resume flags on the
-next launch in the same project directory. Use `termvox shell --fresh` to ignore
+When `[workspace].persist_session` is enabled (default), TermVox saves upstream
+session ids per agent to `.termvox/session.json` and passes resume flags on the
+next launch in the **same project directory**. Use `termvox shell --fresh` to ignore
 the saved session. With `discover_session = true` (default), TermVox also probes
-agent-local stores when no id is saved yet.
+agent-local stores scoped to that directory when no id is saved yet (never a
+global/latest-session fallback).
 
 ## Cursor trust
 

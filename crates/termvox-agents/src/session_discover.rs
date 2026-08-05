@@ -36,6 +36,9 @@ fn discover_cursor(cwd: &Path) -> Option<String> {
     let root = dirs::home_dir()?
         .join(".cursor/projects")
         .join(cursor_project_slug(cwd));
+    if !root.is_dir() {
+        return None;
+    }
     latest_subdirectory_id(&root.join("agent-transcripts"))
 }
 
@@ -43,6 +46,9 @@ fn discover_claude(cwd: &Path) -> Option<String> {
     let root = dirs::home_dir()?
         .join(".claude/projects")
         .join(claude_project_slug(cwd));
+    if !root.is_dir() {
+        return None;
+    }
     latest_subdirectory_id(&root).or_else(|| latest_jsonl_session_id(&root))
 }
 
@@ -174,6 +180,18 @@ fn heuristic_session_id(text: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cursor_discovers_only_when_project_dir_exists() {
+        let missing = Path::new("/tmp/termvox-no-such-cursor-project-xyz");
+        assert_eq!(discover_cursor(missing), None);
+    }
+
+    #[test]
+    fn claude_discovers_only_when_project_dir_exists() {
+        let missing = Path::new("/tmp/termvox-no-such-claude-project-xyz");
+        assert_eq!(discover_claude(missing), None);
+    }
 
     #[test]
     fn cursor_slug_matches_cursor_projects_layout() {

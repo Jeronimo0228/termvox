@@ -10,6 +10,18 @@ in minor or patch increments and must be called out explicitly.
 
 ## [Unreleased]
 
+## [0.1.0-alpha.13] - 2026-08-05
+
+### Fixed
+
+- Workspace session resume is scoped per project **and** per agent for all CLIs
+- `.termvox/session.json` v2 stores one upstream session id per agent (no overwrite
+  when switching Cursor ↔ OpenCode in the same repo)
+- OpenCode/Cursor/Claude discovery never falls back to a global “latest session”
+  outside the current workspace directory
+
+[0.1.0-alpha.13]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.12...v0.1.0-alpha.13
+
 ## [0.1.0-alpha.12] - 2026-08-05
 
 ### Fixed
@@ -117,7 +129,7 @@ in minor or patch increments and must be called out explicitly.
 - Mic bar redraw during transcribing and after upstream TUI repaints
 - Clippy and docs for workspace session store APIs
 
-[Unreleased]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.12...main
+[Unreleased]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.13...main
 [0.1.0-alpha.8]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.7...v0.1.0-alpha.8
 [0.1.0-alpha.7]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.6...v0.1.0-alpha.7
 

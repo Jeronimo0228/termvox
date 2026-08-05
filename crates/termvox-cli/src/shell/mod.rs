@@ -119,9 +119,8 @@ fn run_session(
     }
     bar.draw()?;
 
-    let mut workspace_session = termvox_core::WorkspaceSession::new(agent, cwd.to_path_buf());
-    workspace_session.remote_id = resumed_remote_id;
-    let captured_remote = Arc::new(Mutex::new(workspace_session.remote_id.clone()));
+    let mut current_remote_id = resumed_remote_id;
+    let captured_remote = Arc::new(Mutex::new(current_remote_id.clone()));
 
     let pty_system = native_pty_system();
     let pair = pty_system
@@ -202,15 +201,15 @@ fn run_session(
         }
 
         if let Some(remote_id) = captured_remote.lock().expect("session mutex").clone() {
-            if workspace_session.remote_id.as_deref() != Some(remote_id.as_str()) {
-                workspace_session.touch_remote_id(remote_id.clone());
+            if current_remote_id.as_deref() != Some(remote_id.as_str()) {
+                current_remote_id = Some(remote_id.clone());
                 bar.set_session_hint(Some(remote_id));
                 last_persist = Instant::now();
             }
         }
 
         if config.workspace.persist_session && last_persist.elapsed() >= Duration::from_secs(15) {
-            workspace::persist_remote_id(config, agent, cwd, workspace_session.remote_id.clone());
+            workspace::persist_remote_id(config, agent, cwd, current_remote_id.clone());
             last_persist = Instant::now();
         }
 
@@ -332,7 +331,7 @@ fn run_session(
     let _ = copy_agent.join();
     let _ = child.lock().expect("child mutex").kill();
     if config.workspace.persist_session {
-        workspace::persist_remote_id(config, agent, cwd, workspace_session.remote_id.clone());
+        workspace::persist_remote_id(config, agent, cwd, current_remote_id.clone());
     }
     bar.set_state(BarState::Exiting);
     bar.draw()?;

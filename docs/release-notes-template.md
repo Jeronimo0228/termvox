@@ -1,6 +1,6 @@
-## TermVox v0.1.0-alpha.12 — launch-ready docs, manual demo guide
+## TermVox v0.1.0-alpha.13 — launch-ready docs, manual demo guide
 
-Pin: `TERMVOX_VERSION=v0.1.0-alpha.12`
+Pin: `TERMVOX_VERSION=v0.1.0-alpha.13`
 
 ### What's new in alpha.11
 
@@ -13,6 +13,6 @@ Pin: `TERMVOX_VERSION=v0.1.0-alpha.12`
 ```bash
 npm install -g termvox@latest
 # or
-TERMVOX_VERSION=v0.1.0-alpha.12 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
+TERMVOX_VERSION=v0.1.0-alpha.13 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
 termvox doctor
 ```
