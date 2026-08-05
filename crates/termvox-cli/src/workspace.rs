@@ -39,11 +39,12 @@ pub fn persist_remote_id(
     if !config.workspace.persist_session {
         return;
     }
-    let mut session = WorkspaceSession::new(agent, cwd.to_path_buf());
+    let cwd = cwd.canonicalize().unwrap_or_else(|_| cwd.to_path_buf());
+    let mut session = WorkspaceSession::new(agent, cwd.clone());
     if let Some(id) = remote_id.filter(|value| !value.is_empty()) {
         session.touch_remote_id(id);
     }
-    let path = session_path(config, cwd);
+    let path = session_path(config, &cwd);
     if let Err(error) = session.save(&path) {
         tracing::warn!(%error, "failed to persist workspace session");
     }

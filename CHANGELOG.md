@@ -10,6 +10,17 @@ in minor or patch increments and must be called out explicitly.
 
 ## [Unreleased]
 
+## [0.1.0-alpha.12] - 2026-08-05
+
+### Fixed
+
+- OpenCode session resume no longer falls back to the latest global session when
+  switching workspaces; discovery matches `project.worktree` / `project_directory`
+- Workspace session files compare canonical paths so `.termvox/session.json` stays
+  scoped per project directory
+
+[0.1.0-alpha.12]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.11...v0.1.0-alpha.12
+
 ## [0.1.0-alpha.11] - 2026-08-05
 
 ### Added
@@ -106,7 +117,7 @@ in minor or patch increments and must be called out explicitly.
 - Mic bar redraw during transcribing and after upstream TUI repaints
 - Clippy and docs for workspace session store APIs
 
-[Unreleased]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.11...main
+[Unreleased]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.12...main
 [0.1.0-alpha.8]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.7...v0.1.0-alpha.8
 [0.1.0-alpha.7]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.6...v0.1.0-alpha.7
 

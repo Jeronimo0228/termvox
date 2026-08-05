@@ -118,6 +118,9 @@ into an external TUI you manage yourself.
 
 - **Cursor:** shell mode auto-trusts the cwd (`-f`); stdin injection replaces auto-paste.
 - **OpenCode:** launches the interactive TUI (`opencode` with no subcommand).
+  Session resume is scoped to the **current project directory** (OpenCode
+  `project.worktree` / `project_directory`, not the latest global session).
+  Use `termvox shell --fresh` when switching repos if you want a new chat.
   One-shot `opencode run --format json` is used by `termvox start` in branded
   mode. Authenticate with `opencode auth login` first.
 - **Claude / Codex / Gemini / Amp:** launch interactive TUI, not one-shot
