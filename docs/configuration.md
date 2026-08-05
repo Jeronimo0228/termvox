@@ -20,11 +20,12 @@ Generate a project file with `termvox init`, a global file with
 ## Complete example
 
 ```toml
-performance_profile = "fast"
+# Prefer "balanced" + ggml-base for better STT (see performance.md / es/stt.md).
+performance_profile = "balanced"
 speech_engine = "whisper"
-agent = "codex"
+agent = "opencode"
 push_to_talk = "SPACE"
-language = "en"
+language = "es"
 auto_send = false
 confirmation = true
 permission_profile = "safe"
@@ -33,17 +34,19 @@ permission_profile = "safe"
 # Omit device to use the OS default input.
 # device = "Exact device name reported by termvox doctor"
 sample_rate = 16000
-max_seconds = 30
-vad_threshold_db = -45.0
-vad_silence_ms = 400
+max_seconds = 60
+vad_threshold_db = -42.0
+vad_silence_ms = 700
 auto_stop_on_silence = true
 
 [whisper]
-model = "/home/user/.local/share/termvox/models/ggml-tiny.bin"
+# Install: termvox models install accurate
+model = "/home/user/.local/share/termvox/models/ggml-base.bin"
 threads = 0
-max_threads = 4
-prewarm_on_start = false
-optimize_for_latency = true
+max_threads = 6
+prewarm_on_start = true
+optimize_for_latency = false
+streaming = true
 
 [openai]
 api_key_env = "OPENAI_API_KEY"
@@ -103,24 +106,40 @@ regardless of `auto_send` and `confirmation`.
 
 ## Audio
 
-`audio.sample_rate` must be from 8,000 through 192,000 Hz.
-`audio.max_seconds` must be positive and caps collected source samples.
-`audio.vad_threshold_db` controls energy-based trimming; a less negative value
-requires louder audio. `audio.device` must exactly match an input device name.
+| Key | Meaning | Typical values |
+| --- | --- | --- |
+| `sample_rate` | Capture rate (Hz); Whisper expects 16000 | `16000` |
+| `max_seconds` | Hard cap on one utterance | `30`–`120` |
+| `vad_threshold_db` | Energy gate; less negative ⇒ needs louder speech | `-50` … `-40` |
+| `vad_silence_ms` | Silence before auto-stop (when enabled) | `400`–`1000` |
+| `auto_stop_on_silence` | End recording on silence vs only via hotkey | `true` / `false` |
+| `device` | Exact input name from `termvox doctor` | omit = OS default |
 
-`audio.vad_silence_ms` controls trailing audio retained after the last voiced
-20 ms frame. Up to 200 ms of the same window is also retained before the first
-voiced frame. This setting trims captured audio; it does not stop recording.
+`audio.sample_rate` must be from 8,000 through 192,000 Hz.
+`audio.max_seconds` must be positive.
+
+When `auto_stop_on_silence` is true, `vad_silence_ms` also drives live
+end-of-utterance detection in shell mode. Raise it if phrases are cut short.
+
+Symptom → fix table: [Performance and STT quality](performance.md#audio--vad-tuning).
 
 ## Speech providers
 
-Embedded Whisper is the default. Install the reviewed model with
-`termvox models install default` (~74 MiB tiny) or
-`termvox models install accurate` (~142 MiB base). See
-[Performance](performance.md).
-tilde (`~`) expansion is performed by shells, not TOML parsers, so a quoted
-path beginning with `~` may not work. `whisper.threads = 0` selects available
-CPU parallelism.
+Embedded Whisper is the default. Install models with:
+
+```bash
+termvox models install default     # tiny  (~74 MiB)  — fast profile
+termvox models install accurate    # base  (~142 MiB) — balanced / accurate
+```
+
+Set `performance_profile` and `language` for quality; see
+[Performance and STT quality](performance.md) and the
+[Spanish STT guide](es/stt.md).
+
+Tilde (`~`) expansion is performed by shells, not TOML parsers, so a quoted
+path beginning with `~` may not work — use absolute paths.
+`whisper.threads = 0` selects available CPU parallelism (capped by
+`whisper.max_threads`).
 
 `openai.api_key_env` is an environment-variable name, not the secret itself.
 Changing `openai.endpoint` redirects both the audio upload and bearer

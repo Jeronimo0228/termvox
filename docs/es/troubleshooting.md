@@ -36,12 +36,34 @@ acordes como `ALT+SPACE` no están soportados.
 Baja `audio.vad_threshold_db` (más negativo), acércate al micrófono o verifica
 el dispositivo de entrada.
 
+## El STT es impreciso / mala calidad
+
+El default `performance_profile = "fast"` usa `ggml-tiny`, débil en español y
+frases largas. Guía completa: [Configurar STT](stt.md).
+
+```bash
+termvox models install accurate
+# En termvox.toml:
+#   performance_profile = "balanced"
+#   language = "es"
+#   [whisper] model = "/ruta/absoluta/ggml-base.bin"
+termvox doctor
+termvox test --seconds 4
+```
+
+| Síntoma | Qué hacer |
+| --- | --- |
+| Palabras incorrectas | `balanced` + `ggml-base` + `language = "es"` |
+| Corta a mitad de frase | Sube `vad_silence_ms` o desactiva `auto_stop_on_silence` |
+| Solo ruido / “[Música]” | Revisa mic; sube `vad_threshold_db` |
+| Aún insuficiente | Prueba `accurate` o `speech_engine = "openai"` |
+
 ## Modelo Whisper no encontrado
 
 ```bash
 termvox models install default    # fast → ggml-tiny.bin
 termvox models install accurate   # balanced/accurate → ggml-base.bin
-termvox models status default
+termvox models status accurate
 ```
 
 Usa rutas absolutas en `termvox.toml`; `~` entre comillas no siempre se

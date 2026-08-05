@@ -111,19 +111,29 @@ termvox test --seconds 3
 
 Records, transcribes, and prints text without contacting an agent.
 
-## 6. Speech engine (optional)
+## 6. Speech engine / STT quality (optional)
 
-Default (local, free):
+Default is local Whisper on the **`fast`** profile (`ggml-tiny`). For better
+accuracy (recommended for Spanish or longer prompts):
+
+```bash
+termvox models install accurate
+```
 
 ```toml
+performance_profile = "balanced"
 speech_engine = "whisper"
+language = "es"
 
 [whisper]
-model = "/absolute/path/to/ggml-tiny.bin"   # optional override
+model = "/absolute/path/to/ggml-base.bin"
 threads = 0
 ```
 
-For OpenAI transcription:
+Full guide: [Performance and STT quality](performance.md) ·
+[Configurar STT (ES)](es/stt.md).
+
+For OpenAI cloud transcription:
 
 ```toml
 speech_engine = "openai"

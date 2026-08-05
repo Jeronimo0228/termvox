@@ -38,13 +38,37 @@ Lower `audio.vad_threshold_db` (make it more negative), move closer to the
 microphone, or verify the selected input. `vad_silence_ms` retains audio around
 detected speech but does not make quiet audio count as voiced.
 
-## Whisper model not found
+## Transcription is inaccurate / STT quality is poor
 
-Install the reviewed default model:
+Default `performance_profile = "fast"` uses `ggml-tiny`, which is often weak for
+Spanish and longer coding prompts.
 
 ```bash
-termvox models install default
-termvox models status default
+termvox models install accurate
+# In termvox.toml:
+#   performance_profile = "balanced"
+#   language = "es"
+#   [whisper] model = "/absolute/path/to/ggml-base.bin"
+termvox doctor
+termvox test --seconds 4
+```
+
+Full guide: [Performance and STT quality](performance.md) ·
+[Configurar STT (ES)](es/stt.md).
+
+| Symptom | Fix |
+| --- | --- |
+| Wrong words, especially Spanish | `balanced` + `ggml-base` + `language = "es"` |
+| Cuts mid-sentence | Raise `audio.vad_silence_ms` or disable `auto_stop_on_silence` |
+| Only noise / `[Música]` | Check mic; raise `vad_threshold_db`; speak closer |
+| Still not enough | Try `accurate`, or `speech_engine = "openai"` |
+
+## Whisper model not found
+
+```bash
+termvox models install default     # tiny  — fast profile
+termvox models install accurate    # base  — balanced / accurate
+termvox models status accurate
 ```
 
 Use an absolute model path in `termvox.toml`; quoted TOML values beginning

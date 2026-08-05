@@ -1,6 +1,9 @@
 /target/
 .termvox/
-termvox.toml
+/termvox.toml
+**/termvox.toml
+!examples/termvox.toml
+!termvox.toml.example
 *.wav
 *.bin
 *.download

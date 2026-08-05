@@ -13,7 +13,8 @@ already shipped versus what still needs manual evidence before a beta or V1 clai
 | Release workflow on tags | Multi-platform builds, SHA-256, Sigstore bundles, SBOM fallback |
 
 Install paths: [npm](npm.md), [shell script](../scripts/install.sh),
-[quick start](quick-start.md).
+[quick start](quick-start.md). STT tuning: [performance](performance.md) ·
+[STT ES](es/stt.md).
 
 ## Automated gates (green on `main`)
 

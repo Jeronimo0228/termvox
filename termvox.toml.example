@@ -1,7 +1,9 @@
+# Copy to ~/.config/termvox/termvox.toml (global) or ./termvox.toml (project).
+# STT guide: docs/performance.md · docs/es/stt.md
+
+performance_profile = "balanced"   # fast | balanced | accurate | custom
 speech_engine = "whisper"
-performance_profile = "fast"
-agent = "codex"
-# Set this to an enabled [[plugins]].id to use a plugin instead of `agent`.
+agent = "opencode"
 # agent_plugin = "example"
 push_to_talk = "SPACE"
 language = "es"
@@ -11,9 +13,9 @@ permission_profile = "safe"
 
 [audio]
 sample_rate = 16000
-max_seconds = 30
-vad_threshold_db = -45.0
-vad_silence_ms = 400
+max_seconds = 60
+vad_threshold_db = -42.0
+vad_silence_ms = 700
 auto_stop_on_silence = true
 
 [runtime]
@@ -24,25 +26,37 @@ max_output_bytes = 8388608
 max_json_frame_bytes = 1048576
 
 [whisper]
-model = "/home/you/.local/share/termvox/models/ggml-tiny.bin"
+# Install: termvox models install accurate
+model = "/home/you/.local/share/termvox/models/ggml-base.bin"
 threads = 0
-max_threads = 4
-prewarm_on_start = false
-optimize_for_latency = true
+max_threads = 6
+prewarm_on_start = true
+optimize_for_latency = false
+streaming = true
 
 [cursor]
 # Deprecated: use [agents.cursor]. Kept for backward-compatible loading.
 trust_workspace = false
 
 [agents.cursor]
-# display = "companion"       # default — voice + clipboard for the native Cursor TUI
-# copy_to_clipboard = true    # default in companion mode
-# Required for non-interactive Cursor CLI runs in a trusted project directory.
-trust_workspace = false
+# display = "shell"
+# trust_workspace = true
 
-[agents.codex]
-# executable = "/usr/local/bin/codex"
-# extra_args = []
+[agents.opencode]
+# display = "shell"
+
+[shell]
+hotkey = "F8"
+alt_hotkeys = ["Ctrl+Space"]
+exit_hotkey = "Ctrl+\\"
+auto_submit = true
+
+[workspace]
+persist_session = true
+discover_session = true
+
+[pipeline]
+dictionary = { "api rest" = "REST API", "open code" = "OpenCode" }
 
 [openai]
 api_key_env = "OPENAI_API_KEY"
@@ -51,24 +65,5 @@ endpoint = "https://api.openai.com/v1/audio/transcriptions"
 timeout_seconds = 180
 max_response_bytes = 2097152
 
-[parakeet]
-executable = "termvox-parakeet"
-model = "/home/you/.local/share/termvox/models/parakeet"
-
-[vosk]
-executable = "termvox-vosk"
-model = "/home/you/.local/share/termvox/models/vosk"
-
-[pipeline]
-# Explicit substitutions only; TermVox never invents requirements.
-dictionary = { "api rest" = "REST API", "j w t" = "JWT" }
-
-# Plugins are explicit out-of-process programs, not in-process sandboxes.
-# [[plugins]]
-# id = "example"
-# executable = "/absolute/path/to/plugin"
-# args = []
-# enabled = true
-# env_allowlist = []
-# timeout_seconds = 30
-# max_frame_bytes = 1048576
+[telemetry]
+enabled = false

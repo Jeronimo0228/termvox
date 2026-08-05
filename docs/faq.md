@@ -62,6 +62,13 @@ TermVox itself currently reads keys from its focused terminal. You can bind an
 OS or window-manager shortcut to `termvox record start`, `stop`, or `toggle`,
 but TermVox does not install a global hook.
 
+## Why is speech-to-text inaccurate?
+
+The default `fast` profile uses Whisper **tiny**. Switch to `balanced` or
+`accurate`, install `ggml-base.bin`, and set `language` to the language you
+speak. See [Performance and STT quality](performance.md) or
+[Configurar STT (ES)](es/stt.md).
+
 ## Can I configure a different microphone?
 
 Yes. Set `audio.device` to an exact input-device name reported by

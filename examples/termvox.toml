@@ -1,0 +1,94 @@
+# TermVox project configuration example.
+# Copy to ./termvox.toml (or ~/.config/termvox/termvox.toml) and adapt paths.
+#
+# STT quality guide:
+#   docs/performance.md  ·  docs/es/stt.md
+
+performance_profile = "balanced"   # fast | balanced | accurate | custom
+speech_engine = "whisper"          # whisper | openai | parakeet | vosk
+agent = "opencode"                 # cursor | opencode | claude | codex | ...
+push_to_talk = "SPACE"
+language = "es"                    # IMPORTANT: language you speak
+auto_send = false
+confirmation = true
+permission_profile = "safe"
+
+[audio]
+# device = "Exact input device name from: termvox doctor"
+sample_rate = 16000
+max_seconds = 60
+vad_threshold_db = -42.0
+# Raise if phrases are cut short; lower threshold if noise is captured.
+vad_silence_ms = 700
+auto_stop_on_silence = true
+
+[whisper]
+# Install with: termvox models install accurate
+# Linux default location:
+#   ~/.local/share/termvox/models/ggml-base.bin
+model = "/absolute/path/to/ggml-base.bin"
+threads = 0
+max_threads = 6
+prewarm_on_start = true
+optimize_for_latency = false
+streaming = true
+
+# Cloud STT (optional — uploads audio):
+# speech_engine = "openai"
+[openai]
+# Set this environment variable; never put the secret in this file.
+api_key_env = "OPENAI_API_KEY"
+model = "gpt-4o-mini-transcribe"
+endpoint = "https://api.openai.com/v1/audio/transcriptions"
+timeout_seconds = 180
+max_response_bytes = 2097152
+
+# Parakeet and Vosk use separately supplied sidecar executables.
+[parakeet]
+executable = "termvox-parakeet"
+model = "/absolute/path/to/parakeet-model"
+
+[vosk]
+executable = "termvox-vosk"
+model = "/absolute/path/to/vosk-model"
+
+[runtime]
+agent_timeout_seconds = 900
+speech_timeout_seconds = 180
+shutdown_timeout_seconds = 5
+max_output_bytes = 8388608
+max_json_frame_bytes = 1048576
+
+[shell]
+hotkey = "F8"
+alt_hotkeys = ["Ctrl+Space"]
+exit_hotkey = "Ctrl+\\"
+auto_submit = true
+# skip_confirmation = false
+
+# Per-agent CLI options. Only the selected `agent` profile is used at runtime.
+[agents.cursor]
+# display = "shell"        # integrated mic bar (recommended)
+# display = "companion"    # paste into native Cursor TUI
+# trust_workspace = true
+# executable = "/path/to/agent"
+
+[agents.opencode]
+# display = "shell"
+
+[agents.claude]
+# extra_args = []
+
+[agents.codex]
+# extra_args = []
+
+[workspace]
+persist_session = true
+discover_session = true
+# session_file = ".termvox/session.json"
+
+[pipeline]
+# Literal post-STT replacements (product names, acronyms).
+dictionary = { "api rest" = "REST API", "j w t" = "JWT", "open code" = "OpenCode" }
+# prefix = "Project context"
+# suffix = "Ask before changing dependencies."

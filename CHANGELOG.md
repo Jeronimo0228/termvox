@@ -10,6 +10,11 @@ in minor or patch increments and must be called out explicitly.
 
 ## [Unreleased]
 
+### Added
+
+- STT documentation: performance profiles, VAD tuning, model install, Spanish guide
+  (`docs/performance.md`, `docs/es/stt.md`, examples + troubleshooting links)
+
 ## [0.1.0-alpha.15] - 2026-08-05
 
 ### Fixed

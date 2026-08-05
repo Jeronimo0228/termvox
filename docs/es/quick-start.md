@@ -94,6 +94,24 @@ Si `display = "shell"`, `termvox start` delega a `termvox shell`.
 termvox test --seconds 3
 ```
 
+## Mejorar el STT (recomendado en español)
+
+El default (`fast` + `ggml-tiny`) es rápido pero impreciso. Para mejor calidad:
+
+```bash
+termvox models install accurate
+```
+
+```toml
+performance_profile = "balanced"
+language = "es"
+
+[whisper]
+model = "/ruta/absoluta/ggml-base.bin"
+```
+
+Guía completa: **[Configurar STT / voz](stt.md)**.
+
 ## Transcripción OpenAI (opcional)
 
 ```toml
@@ -107,5 +125,5 @@ api_key_env = "OPENAI_API_KEY"
 export OPENAI_API_KEY="tu-clave"
 ```
 
-Documentación en inglés: [quick start](../quick-start.md), [agent shell](../agent-shell.md),
-[CLI reference](../cli-reference.md), [configuración](../configuration.md).
+Más docs: [Configurar STT](stt.md), [shell](shell.md),
+[quick start EN](../quick-start.md), [configuration EN](../configuration.md).
