@@ -4,10 +4,13 @@ termvox.toml
 !examples/termvox.toml
 !termvox.toml.example
 *.wav
-# Local LinkedIn / OBS exports (keep scripts, ignore media)
+# Local LinkedIn / OBS exports (keep scripts, never commit media)
 /demo-out/
+/scripts/demo-assets/
 *.mp4
-!docs/**/*.mp4
+*.mov
+*.webm
+*.cast
 *.bin
 *.download
 *.cdx.json
@@ -20,3 +23,7 @@ packages/termvox/.cache/
 packages/termvox/*.tgz
 *.vsix
 .cache/
+.idea/
+.vscode/
+*.swp
+*~
