@@ -7,26 +7,25 @@
 
 ## Texto sugerido
 
-Estoy construyendo **TermVox** en público: una capa de **voz local** para agentes de coding en la terminal.
+**HABLA.** Al agente. En la terminal. Sin salir del TUI.
 
-Hablas → **Whisper** transcribe en tu máquina (sin API key de speech) → revisas el prompt → solo entonces llega a **Cursor, OpenCode, Claude Code, Codex** y otros CLIs que ya usas.
+Estoy lanzando **TermVox** en alpha: una capa de **voz local** para coding agents (Cursor, OpenCode, Claude Code, Codex…).
 
-No es otro chatbot. Es push-to-talk dentro de `termvox shell`, con barra de micrófono integrada en el TUI del agente.
+Hablas → **Whisper** en tu máquina (sin API key de speech) → confirmas → el agente lo recibe en el mismo TUI.
+
+No es otro chatbot. Es push-to-talk con mic bar integrada: **F8 / Ctrl+Space**.
 
 ```bash
 npm install -g termvox
-termvox shell --agent cursor
+termvox shell --agent opencode
 ```
 
-**Estado:** alpha temprana (`0.1.0-alpha.15`) — APIs y adapters pueden cambiar.
-Busco **early adopters** que ya usen agent CLIs y quieran probar voz offline.
+Alpha temprana — busco early adopters que ya vivan en agent CLIs.
 
 Repo: https://github.com/Jeronimo0228/termvox
 npm: https://www.npmjs.com/package/termvox
 
-Si lo pruebas, el feedback en GitHub me ayuda mucho (especialmente macOS / Windows).
-
-#OpenSource #Rust #DeveloperTools #AI #Voice #CLI #Cursor #BuildInPublic
+#BuildInPublic #OpenSource #Rust #DeveloperTools #AI #Voice #CLI #Cursor #OpenCode
 
 ---
 
