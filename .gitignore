@@ -13,3 +13,4 @@ packages/termvox/vendor/
 packages/termvox/.cache/
 packages/termvox/*.tgz
 *.vsix
+.cache/
