@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
-"""Practical TermVox pitch demo: terminal setup animation + cleaned session.
+"""midudev-style practical TermVox demo for X / LinkedIn.
 
-- Animated terminal walkthrough (config / doctor / models / shell)
-- Real screen recording, full-bleed 16:9 (no letterbox bars)
-- ANSI glitch fragments covered with drawbox
-- No marketing title cards or burned-in captions
+Research takeaways (X @midudev OSS/feature clips, Aug 2026):
+  - 12–20s of pure product motion (no title cards, no voiceover text in-frame)
+  - Hook + bullets live in the post copy, not burned into the video
+  - Jump straight to the magic; skip long setup
+  - Tight framing, dark UI, something changes every second
+  - End on the wow result
+
+This script:
+  1) ~3.5s ultra-fast terminal flash (init/doctor/shell) — optional
+  2) Jump-cuts from your screen recording: listening → prompt → agent
+  3) Soft zoom punches + ANSI glitch cover + full-width 16:9
 
 Usage:
   /usr/bin/python3.14 scripts/render-linkedin-demo.py \\
@@ -35,15 +42,21 @@ CURSOR = (45, 212, 191)
 
 FONT_REG = "/usr/share/fonts/adobe-source-code-pro-fonts/SourceCodePro-Regular.otf"
 FONT_MED = "/usr/share/fonts/adobe-source-code-pro-fonts/SourceCodePro-Medium.otf"
-FONT_BOLD = "/usr/share/fonts/adobe-source-code-pro-fonts/SourceCodePro-Bold.otf"
 
-# Source recording is 1920x924. Cover center ANSI garbage + corrupted SGR crumbs
-# in the composer strip. Times are source-absolute; process_recording shifts by --start.
+# Source 1920x924 — cover ANSI crumbs (source-absolute times)
 GLITCH_BOXES_SRC = [
-    # Center fragment like "38;2;255;255;255m"
     (560, 430, 620, 90, "0x0A0C10", 10.5, 34.5),
-    # Corrupted composer crumbs e.g. "8;2;30;30;"
     (220, 700, 900, 50, "0x141820", 10.5, 40.0),
+]
+
+# Jump-cut storyboard on SOURCE timeline (tuned for 2026-08-04 23-39-46 take)
+# listening / shell ready → prompt → agent working → interactive scope
+SEGMENTS = [
+    # (start, end, zoom, label)
+    (2.0, 7.5, 1.0, "shell_ready"),
+    (14.0, 20.5, 1.08, "listening_prompt"),  # zoom into action
+    (28.0, 38.0, 1.04, "agent_work"),
+    (48.0, 57.5, 1.0, "result_ui"),
 ]
 
 
@@ -52,7 +65,7 @@ def font(path: str, size: int) -> ImageFont.FreeTypeFont:
 
 
 def run(cmd: list[str]) -> None:
-    print("+", " ".join(str(c) for c in cmd[:14]), "..." if len(cmd) > 14 else "", flush=True)
+    print("+", " ".join(str(c) for c in cmd[:16]), "..." if len(cmd) > 16 else "", flush=True)
     subprocess.run(cmd, check=True)
 
 
@@ -99,199 +112,89 @@ def x264(kind: str) -> list[str]:
 
 
 class TerminalScene:
-    """Fullscreen terminal renderer with typing + scrolling lines."""
-
     def __init__(self) -> None:
         self.lines: list[tuple[str, tuple[int, int, int]]] = []
         self.prompt_cwd = "~/proyecto"
         self.partial = ""
-        self.partial_color = FG
         self.show_cursor = True
-        self.f_reg = font(FONT_REG, 44)
-        self.f_med = font(FONT_MED, 44)
-        self.f_bold = font(FONT_BOLD, 44)
-        self.pad_x = 96
-        self.pad_y = 72
-        self.line_h = 58
-        self.max_visible = 28
+        self.f_reg = font(FONT_REG, 48)
+        self.f_med = font(FONT_MED, 48)
+        self.pad_x = 110
+        self.pad_y = 90
+        self.line_h = 64
+        self.max_visible = 24
 
     def add(self, text: str, color: tuple[int, int, int] = FG) -> None:
         self.lines.append((text, color))
 
-    def clear(self) -> None:
-        self.lines.clear()
-        self.partial = ""
-
     def render(self) -> Image.Image:
         img = Image.new("RGB", (W, H), BG)
         draw = ImageDraw.Draw(img)
-        # subtle top bar like a real VTE
-        draw.rectangle([0, 0, W, 48], fill=PANEL)
-        draw.ellipse([28, 14, 48, 34], fill=(255, 95, 87))
-        draw.ellipse([60, 14, 80, 34], fill=(255, 189, 46))
-        draw.ellipse([92, 14, 112, 34], fill=(39, 201, 63))
-        draw.text((140, 10), f"termvox — {self.prompt_cwd}", font=font(FONT_MED, 28), fill=DIM)
+        draw.rectangle([0, 0, W, 52], fill=PANEL)
+        for i, col in enumerate(((255, 95, 87), (255, 189, 46), (39, 201, 63))):
+            x = 28 + i * 34
+            draw.ellipse([x, 16, x + 20, 36], fill=col)
+        draw.text((140, 12), f"termvox — {self.prompt_cwd}", font=font(FONT_MED, 30), fill=DIM)
 
         visible = self.lines[-self.max_visible :]
-        y = self.pad_y + 40
+        y = self.pad_y + 30
         for text, color in visible:
             draw.text((self.pad_x, y), text, font=self.f_reg, fill=color)
             y += self.line_h
 
-        # active input line
         prompt = f"{self.prompt_cwd} ❯ "
         draw.text((self.pad_x, y), prompt, font=self.f_med, fill=TEAL)
         px = self.pad_x + int(draw.textlength(prompt, font=self.f_med))
-        draw.text((px, y), self.partial, font=self.f_reg, fill=self.partial_color)
+        draw.text((px, y), self.partial, font=self.f_reg, fill=FG)
         if self.show_cursor:
             cx = px + int(draw.textlength(self.partial, font=self.f_reg))
-            draw.rectangle([cx + 4, y + 8, cx + 28, y + 48], fill=CURSOR)
+            draw.rectangle([cx + 4, y + 10, cx + 30, y + 52], fill=CURSOR)
         return img
 
 
-def type_command(scene: TerminalScene, frames: list[Image.Image], cmd: str, cps: float = 34.0) -> None:
-    scene.partial = ""
-    scene.show_cursor = True
-    for _ in range(4):
-        frames.append(scene.render())
-    n = max(1, int(len(cmd) / cps * FPS))
-    for i in range(n + 1):
-        chars = int(len(cmd) * i / max(1, n))
-        scene.partial = cmd[:chars]
-        scene.show_cursor = (i % 2 == 0) or chars < len(cmd)
-        frames.append(scene.render())
-    for _ in range(3):
-        scene.show_cursor = True
-        frames.append(scene.render())
-    scene.add(f"{scene.prompt_cwd} ❯ {cmd}", FG)
-    scene.partial = ""
-    scene.show_cursor = False
-    frames.append(scene.render())
-
-
-def emit_lines(
-    scene: TerminalScene,
-    frames: list[Image.Image],
-    lines: list[tuple[str, tuple[int, int, int]]],
-    hold: int = 2,
-) -> None:
-    for text, color in lines:
-        scene.add(text, color)
-        for _ in range(hold):
-            frames.append(scene.render())
-
-
-def hold(scene: TerminalScene, frames: list[Image.Image], frames_n: int) -> None:
-    scene.show_cursor = True
-    for i in range(frames_n):
-        scene.show_cursor = (i // 8) % 2 == 0
-        frames.append(scene.render())
-
-
-def build_setup_animation() -> list[Image.Image]:
+def build_flash_animation() -> list[Image.Image]:
+    """~3.5s midu-style cold open: three commands, no lingering."""
     scene = TerminalScene()
     frames: list[Image.Image] = []
 
-    hold(scene, frames, 6)
-    type_command(scene, frames, "cd ~/proyecto")
-    emit_lines(scene, frames, [("", DIM)], hold=1)
-
-    type_command(scene, frames, "termvox init --preset opencode --force")
-    emit_lines(
-        scene,
-        frames,
-        [
-            ("wrote termvox.toml", TEAL),
-            ("preset=opencode  display=shell  language=es", DIM),
-            ("", DIM),
-        ],
-        hold=2,
-    )
-
-    type_command(scene, frames, "termvox config show")
-    emit_lines(
-        scene,
-        frames,
-        [
-            ('performance_profile = "balanced"', FG),
-            ('speech_engine = "whisper"', FG),
-            ('agent = "opencode"', FG),
-            ('language = "es"', FG),
-            ("confirmation = true", FG),
-            ("", DIM),
-            ("[whisper]", DIM),
-            ('model = "~/.local/share/termvox/models/ggml-base.bin"', FG),
-            ("", DIM),
-            ("[agents.opencode]", DIM),
-            ('display = "shell"', FG),
-            ("", DIM),
-        ],
-        hold=1,
-    )
-    hold(scene, frames, 10)
-
-    type_command(scene, frames, "termvox models install accurate")
-    for pct in (12, 34, 58, 79, 100):
-        bar = "█" * (pct // 5) + "░" * (20 - pct // 5)
-        scene.add(f"downloading whisper-base  [{bar}] {pct}%", DIM)
-        for _ in range(3):
+    def type_fast(cmd: str) -> None:
+        scene.partial = ""
+        n = max(6, int(len(cmd) * 0.55))
+        for i in range(n + 1):
+            scene.partial = cmd[: int(len(cmd) * i / n)]
+            scene.show_cursor = i % 2 == 0
             frames.append(scene.render())
-    emit_lines(
-        scene,
-        frames,
+        scene.add(f"{scene.prompt_cwd} ❯ {cmd}", FG)
+        scene.partial = ""
+        scene.show_cursor = False
+        frames.append(scene.render())
+
+    def lines(items: list[tuple[str, tuple[int, int, int]]], hold: int = 1) -> None:
+        for text, color in items:
+            scene.add(text, color)
+            for _ in range(hold):
+                frames.append(scene.render())
+
+    type_fast("termvox init --preset opencode")
+    lines([("wrote termvox.toml", TEAL)], hold=2)
+    type_fast("termvox doctor")
+    lines(
         [
-            ("verified sha256", GREEN),
-            ("installed ggml-base.bin (~142 MiB)", TEAL),
-            ("", DIM),
+            ("[ok] microphone   ready", GREEN),
+            ("[ok] whisper      ggml-base", GREEN),
+            ("[ok] opencode     authenticated", GREEN),
         ],
         hold=2,
     )
-
-    type_command(scene, frames, "termvox doctor")
-    emit_lines(
-        scene,
-        frames,
-        [
-            ("TermVox doctor", FG),
-            ("", DIM),
-            ("[ok] configuration      valid", GREEN),
-            ("[ok] microphone         ready (PipeWire)", GREEN),
-            ("[ok] speech/whisper     ready (ggml-base.bin)", GREEN),
-            ("[ok] agent/opencode     1.18.13 (credentials ok)", GREEN),
-            ("[ok] agent/cursor       credentials present", GREEN),
-            ("", DIM),
-            ("Selected agent: opencode", FG),
-            ("  performance_profile = balanced", DIM),
-            ("  display = shell", DIM),
-            ("  hint: use termvox shell — mic bar inside the agent TUI", TEAL),
-            ("", DIM),
-        ],
-        hold=2,
-    )
-    hold(scene, frames, 14)
-
-    type_command(scene, frames, "termvox shell --agent opencode --fresh")
-    emit_lines(
-        scene,
-        frames,
-        [
-            ("launching opencode in PTY…", DIM),
-            ("whisper prewarm deferred until first voice toggle", DIM),
-            ("mic bar: F8 / Ctrl+Space   exit: Ctrl+\\", TEAL),
-            ("", DIM),
-        ],
-        hold=3,
-    )
-    for i in range(12):
-        img = scene.render()
-        overlay = Image.new("RGB", (W, H), (0, 0, 0))
-        frames.append(Image.blend(img, overlay, i / 11))
-
+    type_fast("termvox shell --agent opencode --fresh")
+    lines([("mic bar · F8 / Ctrl+Space", TEAL)], hold=3)
+    for i in range(8):
+        frames.append(Image.blend(scene.render(), Image.new("RGB", (W, H), (0, 0, 0)), i / 7))
     return frames
 
 
 def encode_frames(frames: list[Image.Image], out_mp4: Path) -> None:
-    with tempfile.TemporaryDirectory(prefix="termvox-anim-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="termvox-flash-") as tmp:
         tmp_path = Path(tmp)
         for i, frame in enumerate(frames):
             frame.save(tmp_path / f"frame_{i:05d}.png")
@@ -311,32 +214,47 @@ def encode_frames(frames: list[Image.Image], out_mp4: Path) -> None:
         )
 
 
-def process_recording(source: Path, out_mp4: Path, start: float) -> None:
-    duration = probe_duration(source)
-    usable = max(0.5, duration - start)
-    # Full-bleed: scale to COVER 16:9 then crop center (no black bars).
-    # Hide ANSI glitch boxes in source pixel space before scale.
-    # With -ss before -i, filter timestamps restart at 0.
-    boxes = []
+def glitch_filters(src_start: float, src_end: float) -> str:
+    """drawbox enables relative to segment start (after -ss)."""
+    parts = []
     for x, y, w, h, color, t0, t1 in GLITCH_BOXES_SRC:
-        a = max(0.0, t0 - start)
-        b = max(0.0, t1 - start)
-        boxes.append(
+        # overlap of [t0,t1] with [src_start, src_end], shifted to local t
+        a = max(t0, src_start) - src_start
+        b = min(t1, src_end) - src_start
+        if b <= 0 or a >= (src_end - src_start):
+            continue
+        parts.append(
             f"drawbox=x={x}:y={y}:w={w}:h={h}:color={color}@1:t=fill:enable='between(t,{a:.2f},{b:.2f})'"
         )
-    box_f = ",".join(boxes) + "," if boxes else ""
-    # Fit full width (no side crop — terminal text stays intact). Pad top/bottom
-    # with the same near-black as the TUI so it reads as full-screen.
-    vf = (
-        f"{box_f}"
-        f"fps={FPS},"
-        f"scale={W}:{H}:force_original_aspect_ratio=decrease:flags=lanczos,"
-        f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2:0x0A0C10,"
-        "eq=contrast=1.05:brightness=0.015:saturation=1.04,"
-        "unsharp=5:5:0.65:5:5:0.0,"
-        "fade=t=in:st=0:d=0.25,"
-        f"fade=t=out:st={max(0.0, usable - 0.45):.3f}:d=0.45"
-    )
+    return ",".join(parts)
+
+
+def render_segment(source: Path, out: Path, start: float, end: float, zoom: float) -> None:
+    dur = max(0.2, end - start)
+    g = glitch_filters(start, end)
+    prefix = f"{g}," if g else ""
+    # Fit full width; pad with TUI black. Optional soft zoom (center).
+    if zoom > 1.001:
+        # zoompan after pad — subtle punch
+        zexpr = f"min({zoom:.3f},1+0.0008*on)"
+        vf = (
+            f"{prefix}"
+            f"fps={FPS},"
+            f"scale={W}:{H}:force_original_aspect_ratio=decrease:flags=lanczos,"
+            f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2:0x0A0C10,"
+            f"zoompan=z='{zexpr}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s={W}x{H}:fps={FPS},"
+            "eq=contrast=1.06:brightness=0.02:saturation=1.05,"
+            "unsharp=5:5:0.7:5:5:0.0"
+        )
+    else:
+        vf = (
+            f"{prefix}"
+            f"fps={FPS},"
+            f"scale={W}:{H}:force_original_aspect_ratio=decrease:flags=lanczos,"
+            f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2:0x0A0C10,"
+            "eq=contrast=1.06:brightness=0.02:saturation=1.05,"
+            "unsharp=5:5:0.7:5:5:0.0"
+        )
     run(
         [
             "ffmpeg",
@@ -346,12 +264,12 @@ def process_recording(source: Path, out_mp4: Path, start: float) -> None:
             "-i",
             str(source),
             "-t",
-            f"{usable:.3f}",
+            f"{dur:.3f}",
             "-vf",
             vf,
             "-an",
             *x264("4k"),
-            str(out_mp4),
+            str(out),
         ]
     )
 
@@ -359,6 +277,7 @@ def process_recording(source: Path, out_mp4: Path, start: float) -> None:
 def concat(parts: list[Path], out_mp4: Path) -> None:
     lst = out_mp4.with_suffix(".txt")
     lst.write_text("".join(f"file '{p.resolve()}'\n" for p in parts), encoding="utf-8")
+    # Re-encode for clean cuts / consistent params after zoompan segments
     run(
         [
             "ffmpeg",
@@ -369,10 +288,9 @@ def concat(parts: list[Path], out_mp4: Path) -> None:
             "0",
             "-i",
             str(lst),
-            "-c",
-            "copy",
-            "-movflags",
-            "+faststart",
+            "-vf",
+            f"fps={FPS},fade=t=in:st=0:d=0.2",
+            *x264("4k"),
             str(out_mp4),
         ]
     )
@@ -401,8 +319,7 @@ def main() -> int:
         type=Path,
         default=Path.home() / "Vídeos" / "termvox-demo",
     )
-    parser.add_argument("--start", type=float, default=0.8)
-    parser.add_argument("--skip-animation", action="store_true")
+    parser.add_argument("--no-flash", action="store_true", help="Skip the 3.5s terminal flash")
     args = parser.parse_args()
 
     if not args.source.exists():
@@ -412,26 +329,42 @@ def main() -> int:
         print("ffmpeg required", file=sys.stderr)
         return 1
 
+    src_dur = probe_duration(args.source)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     master = args.out_dir / "termvox-linkedin-4k.mp4"
     linkedin = args.out_dir / "termvox-linkedin-1080p.mp4"
 
-    with tempfile.TemporaryDirectory(prefix="termvox-demo-") as tmp:
+    print("style: midudev-like short product demo (jump cuts, no title cards)")
+    print(f"source duration: {src_dur:.1f}s")
+
+    with tempfile.TemporaryDirectory(prefix="termvox-midu-") as tmp:
         tmp_path = Path(tmp)
-        session = tmp_path / "session.mp4"
-        print("processing session (full-bleed + hide ANSI glitch)…")
-        process_recording(args.source, session, args.start)
+        parts: list[Path] = []
 
-        parts = [session]
-        if not args.skip_animation:
-            print("rendering terminal setup animation…")
-            anim_frames = build_setup_animation()
-            print(f"animation frames: {len(anim_frames)} (~{len(anim_frames)/FPS:.1f}s)")
-            anim = tmp_path / "setup.mp4"
-            encode_frames(anim_frames, anim)
-            parts = [anim, session]
+        if not args.no_flash:
+            print("flash animation…")
+            flash_frames = build_flash_animation()
+            print(f"  {len(flash_frames)} frames (~{len(flash_frames)/FPS:.1f}s)")
+            flash = tmp_path / "flash.mp4"
+            encode_frames(flash_frames, flash)
+            parts.append(flash)
 
-        print("concat + export…")
+        for i, (start, end, zoom, label) in enumerate(SEGMENTS):
+            if start >= src_dur:
+                continue
+            end = min(end, src_dur - 0.05)
+            if end <= start:
+                continue
+            out = tmp_path / f"seg_{i}_{label}.mp4"
+            print(f"segment {label}: {start:.1f}-{end:.1f}s zoom={zoom}")
+            render_segment(args.source, out, start, end, zoom)
+            parts.append(out)
+
+        if not parts:
+            print("no segments produced", file=sys.stderr)
+            return 1
+
+        print("concat…")
         concat(parts, master)
         downscale_1080(master, linkedin)
 
@@ -439,6 +372,7 @@ def main() -> int:
     print("Wrote:")
     print(f"  {master}")
     print(f"  {linkedin}")
+    print(f"  duration ≈ {probe_duration(linkedin):.1f}s")
     return 0
 
 

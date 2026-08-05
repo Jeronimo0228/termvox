@@ -1,59 +1,46 @@
-# Borrador — post LinkedIn (español)
+# Borrador — post LinkedIn / X (estilo midudev)
 
-> **Cuándo publicar:** después de grabar el video (ver [demo.md](demo.md)) y
-> recibir feedback de al menos 2 beta testers.
+> Video ≈ 20–30 s de **producto en acción**. El copy va aquí, no en pantalla.
 
 ---
 
-## Texto sugerido
+## Texto sugerido (X / LinkedIn)
 
-(El video es solo demo en terminal — este texto va en el post, no en pantalla.)
+¡He open-sourceado **TermVox**!
 
-Estoy lanzando **TermVox** en alpha: voz local para coding agents en la terminal
-(Cursor, OpenCode, Claude Code, Codex…).
+Voz local para coding agents en la terminal.
+Hablas → Whisper on-device → confirmas → Cursor / OpenCode / Claude lo reciben en el mismo TUI.
 
-Hablas → **Whisper** on-device → confirmas → el agente lo recibe en el mismo TUI
-(`termvox shell`, F8 / Ctrl+Space).
+✓ Sin API key de speech  
+✓ Mic bar integrada (`termvox shell`)  
+✓ F8 / Ctrl+Space  
+✓ Alpha abierta
 
 ```bash
 npm install -g termvox
 termvox shell --agent opencode
 ```
 
-Alpha temprana — busco early adopters.
+→ https://github.com/Jeronimo0228/termvox
 
-Repo: https://github.com/Jeronimo0228/termvox  
-npm: https://www.npmjs.com/package/termvox
-
-#BuildInPublic #OpenSource #Rust #DeveloperTools #AI #Voice #CLI #Cursor #OpenCode
+#BuildInPublic #OpenSource #Rust #CLI #AI
 
 ---
 
-## Variante corta (si LinkedIn trunca)
+## Variante ultra corta (X)
 
-**TermVox** = voz local (Whisper) + confirmación antes de enviar → agentes en terminal (Cursor, OpenCode, Claude…).
+TermVox: habla a tu agent CLI.
+Whisper local · mismo TUI · open source.
 
-Alpha preview. `npm install -g termvox && termvox shell`
+`npm i -g termvox && termvox shell`
 
 https://github.com/Jeronimo0228/termvox
 
-#BuildInPublic #Rust #CLI
-
 ---
 
-## Checklist antes de publicar
+## Checklist
 
-- [ ] Video de 45–90 s grabado con OBS (ver [demo.md](demo.md))
-- [ ] Cut práctico (sin texto en video) con `scripts/render-linkedin-demo.py` → **1080p**
-- [ ] Probaste el happy path hoy en tu máquina
-- [ ] 2+ beta testers reportaron (aunque sea “funciona en Linux”)
-- [ ] Primer comentario fijado con link a `docs/demo.md` o quick start
-- [ ] Respuestas preparadas: “necesitas agent CLI instalado”, “es alpha”, “Whisper descarga ~74 MB la primera vez”
-
----
-
-## Primer comentario (fijar)
-
-Guía rápida + feedback: https://github.com/Jeronimo0228/termvox/blob/main/docs/demo.md
-
-Checklist beta: https://github.com/Jeronimo0228/termvox/blob/main/docs/beta-test-checklist.md
+- [ ] Video midu-style (~20–30 s) con `scripts/render-linkedin-demo.py`
+- [ ] Subir **1080p** nativo (sin YouTube link)
+- [ ] Primer comentario: quick start + beta checklist
+- [ ] Happy path probado hoy en tu máquina

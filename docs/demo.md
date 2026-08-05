@@ -63,14 +63,16 @@ Tips:
 - Pre-run `termvox doctor` and `termvox test --seconds 2` so Whisper is warm.
 - If Cursor/OpenCode auth fails, switch to whichever agent shows `[ok]` in doctor.
 
-### 3. Package for LinkedIn / pitch (practical cut)
+### 3. Package for LinkedIn / X (midudev-style cut)
 
-Builds a **terminal-only** pitch video:
+Short **product-in-action** cut (~20–35 s), inspired by how creators like
+[@midudev](https://x.com/midudev) ship OSS demos on X:
 
-1. Animated setup: `init` → `config show` → `models install` → `doctor` → `shell`
-2. Your screen recording (full width, light grade; ANSI glitch fragments covered)
+1. Ultra-fast terminal flash (`init` → `doctor` → `shell`)
+2. Jump-cuts of the real session: ready → listening/prompt → agent → result
+3. Soft zoom, ANSI crumbs covered, full-width framing
 
-No marketing title cards or burned-in captions.
+No marketing title cards. Hook + bullets live in the post copy.
 
 ```bash
 /usr/bin/python3.14 scripts/render-linkedin-demo.py \
@@ -81,10 +83,9 @@ No marketing title cards or burned-in captions.
 Outputs:
 
 - `termvox-linkedin-4k.mp4` — archive master (3840×2160)
-- `termvox-linkedin-1080p.mp4` — **preferred upload** for LinkedIn / decks
+- `termvox-linkedin-1080p.mp4` — **preferred upload** for LinkedIn / X
 
-Keep the pitch text in the LinkedIn post body ([linkedin-post-es.md](linkedin-post-es.md)),
-not burned into the video.
+Post copy: [linkedin-post-es.md](linkedin-post-es.md).
 
 ### Pre-flight checks
 
