@@ -18,7 +18,7 @@ npm install -g termvox
 termvox shell --agent cursor
 ```
 
-**Estado:** alpha temprana (`0.1.0-alpha.12`) — APIs y adapters pueden cambiar.
+**Estado:** alpha temprana (`0.1.0-alpha.13`) — APIs y adapters pueden cambiar.
 Busco **early adopters** que ya usen agent CLIs y quieran probar voz offline.
 
 Repo: https://github.com/Jeronimo0228/termvox

@@ -22,7 +22,7 @@ serde_json = "1.0.151"
 tokio = { version = "1.53.1", features = ["process", "io-util", "time", "rt", "macros", "sync"] }
 tokio-util = { version = "0.7.19", features = ["rt"] }
 tracing = "0.1.44"
-termvox-core = { version = "0.1.0-alpha.12", path = "../termvox-core" }
+termvox-core = { version = "0.1.0-alpha.13", path = "../termvox-core" }
 which = "8.0.5"
 
 [lints]

@@ -11,20 +11,26 @@ pub fn session_path(config: &AppConfig, cwd: &Path) -> PathBuf {
 }
 
 #[must_use]
+pub fn canonical_workspace(cwd: &Path) -> PathBuf {
+    cwd.canonicalize().unwrap_or_else(|_| cwd.to_path_buf())
+}
+
+#[must_use]
 pub fn load_remote_id(config: &AppConfig, agent: AgentKind, cwd: &Path) -> Option<String> {
     if !config.workspace.persist_session {
         return None;
     }
-    let path = session_path(config, cwd);
+    let cwd = canonical_workspace(cwd);
+    let path = session_path(config, &cwd);
     if let Ok(Some(session)) = WorkspaceSession::load(&path) {
-        if session.matches(agent, cwd) {
-            if let Some(id) = session.remote_id.filter(|id| !id.is_empty()) {
-                return Some(id);
+        if session.matches_workspace(&cwd) {
+            if let Some(id) = session.remote_id(agent) {
+                return Some(id.to_owned());
             }
         }
     }
     if config.workspace.discover_session {
-        discover_remote_session(to_supported(agent), cwd)
+        discover_remote_session(to_supported(agent), &cwd)
     } else {
         None
     }
@@ -39,12 +45,18 @@ pub fn persist_remote_id(
     if !config.workspace.persist_session {
         return;
     }
-    let cwd = cwd.canonicalize().unwrap_or_else(|_| cwd.to_path_buf());
-    let mut session = WorkspaceSession::new(agent, cwd.clone());
-    if let Some(id) = remote_id.filter(|value| !value.is_empty()) {
-        session.touch_remote_id(id);
-    }
+    let cwd = canonical_workspace(cwd);
     let path = session_path(config, &cwd);
+    let mut session = WorkspaceSession::load(&path)
+        .ok()
+        .flatten()
+        .filter(|stored| stored.matches_workspace(&cwd))
+        .unwrap_or_else(|| WorkspaceSession::new(cwd.clone()));
+    session.cwd = cwd;
+    match remote_id.filter(|value| !value.is_empty()) {
+        Some(id) => session.set_remote_id(agent, id),
+        None => session.clear_remote_id(agent),
+    }
     if let Err(error) = session.save(&path) {
         tracing::warn!(%error, "failed to persist workspace session");
     }
@@ -84,5 +96,38 @@ const fn to_supported(agent: AgentKind) -> SupportedAgent {
         AgentKind::Aider => SupportedAgent::Aider,
         AgentKind::Amp => SupportedAgent::Amp,
         AgentKind::OpenCode => SupportedAgent::OpenCode,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn persist_keeps_other_agents_in_same_workspace() {
+        let dir = std::env::temp_dir().join(format!("termvox-ws-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let config = AppConfig::default();
+        persist_remote_id(
+            &config,
+            AgentKind::Cursor,
+            &dir,
+            Some("cursor_12345678".into()),
+        );
+        persist_remote_id(
+            &config,
+            AgentKind::OpenCode,
+            &dir,
+            Some("opencode_12345678".into()),
+        );
+        assert_eq!(
+            load_remote_id(&config, AgentKind::Cursor, &dir),
+            Some("cursor_12345678".into())
+        );
+        assert_eq!(
+            load_remote_id(&config, AgentKind::OpenCode, &dir),
+            Some("opencode_12345678".into())
+        );
+        let _ = std::fs::remove_dir_all(dir);
     }
 }

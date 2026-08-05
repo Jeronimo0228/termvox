@@ -1,6 +1,6 @@
 {
   "name": "termvox",
-  "version": "0.1.0-alpha.12",
+  "version": "0.1.0-alpha.13",
   "description": "Voice-driven bridge for coding-agent CLIs — shell, daemon, Whisper, and editor integration",
   "license": "MIT",
   "author": "Jeronimo Restrepo Angel",

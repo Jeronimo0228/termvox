@@ -76,6 +76,6 @@ request.
 
 ## Stability
 
-The workspace version is **0.1.0-alpha.12**. The configuration schema, plugin
+The workspace version is **0.1.0-alpha.13**. The configuration schema, plugin
 protocol, event normalization, and CLI behavior should be treated as unstable
 until the project declares otherwise.
