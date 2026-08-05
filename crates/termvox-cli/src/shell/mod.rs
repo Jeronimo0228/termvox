@@ -1,7 +1,6 @@
 //! Integrated agent shell: upstream CLI TUI + `TermVox` mic bar.
 
 mod bar;
-mod demo;
 mod keys;
 mod messages;
 mod pty_filter;
@@ -48,61 +47,35 @@ pub async fn run(
     agent: AgentKind,
     trailing_args: Vec<String>,
     fresh: bool,
-    demo: bool,
-    demo_auto: bool,
 ) -> Result<()> {
-    if demo_auto && !demo {
-        bail!("--demo-auto requires --demo");
-    }
     let cli_agent = configured_cli_agent_kind(agent, &config);
     let info = cli_agent.probe().await;
-    if !demo && !info.installed {
+    if !info.installed {
         bail!(
             "{} is not installed; install it or pick another agent",
             info.id
         );
     }
-    if !demo {
-        ensure_agent_authenticated(&info)?;
-    }
-    let speech = if demo_auto {
-        None
-    } else {
-        Some(ensure_speech_engine(&config).await?)
-    };
-    if let Some(ref engine) = speech {
-        schedule_prewarm(Arc::clone(engine), &config.whisper);
-    }
+    ensure_agent_authenticated(&info)?;
+    let speech = ensure_speech_engine(&config).await?;
+    schedule_prewarm(Arc::clone(&speech), &config.whisper);
     let cwd = std::env::current_dir()?;
     let profile = config.agents.profile(agent);
-    let remote_id = if fresh || demo {
+    let remote_id = if fresh {
         None
     } else {
         workspace::load_remote_id(&config, agent, &cwd)
     };
-    let launch = if demo {
-        demo::demo_launch(agent, &cwd)?
-    } else {
-        cli_agent.interactive_launch(
-            &cwd,
-            &trailing_args,
-            &profile.shell_invocation(),
-            remote_id.as_deref(),
-        )
-    };
+    let launch = cli_agent.interactive_launch(
+        &cwd,
+        &trailing_args,
+        &profile.shell_invocation(),
+        remote_id.as_deref(),
+    );
     let config = Arc::new(config);
     let supported = to_supported(agent);
     tokio::task::spawn_blocking(move || {
-        run_session(
-            &config,
-            agent,
-            supported,
-            &launch,
-            speech.as_ref(),
-            &cwd,
-            remote_id,
-            demo_auto,
-        )
+        run_session(&config, agent, supported, &launch, &speech, &cwd, remote_id)
     })
     .await
     .context("shell session task failed")?
@@ -114,10 +87,9 @@ fn run_session(
     agent: AgentKind,
     supported: SupportedAgent,
     launch: &InteractiveLaunch,
-    speech: Option<&Arc<dyn SpeechEngine>>,
+    speech: &Arc<dyn SpeechEngine>,
     cwd: &std::path::Path,
     resumed_remote_id: Option<String>,
-    demo_auto: bool,
 ) -> Result<()> {
     let rt = tokio::runtime::Handle::current();
     terminal::enable_raw_mode().context("enable raw mode")?;
@@ -223,20 +195,7 @@ fn run_session(
         }
     });
 
-    let mut demo_auto = if demo_auto {
-        Some(demo::DemoAuto::new())
-    } else {
-        None
-    };
-
     while running {
-        if let Some(ref mut auto) = demo_auto {
-            if auto.tick(&mut bar, &mut writer, &config.language)? {
-                running = false;
-                continue;
-            }
-        }
-
         if exit_rx.try_recv().is_ok() {
             running = false;
             continue;
@@ -258,9 +217,6 @@ fn run_session(
         if let Some(recorder_ref) = &recorder {
             if config.audio.auto_stop_on_silence && recorder_ref.auto_stop_triggered() {
                 let audio = rt.block_on(recorder.take().expect("recorder").stop())?;
-                let speech = speech.ok_or_else(|| {
-                    anyhow::anyhow!("speech engine required for voice capture")
-                })?;
                 handle_finished_recording(
                     config,
                     speech,
@@ -289,14 +245,10 @@ fn run_session(
         }
 
         if let Some(registration) = &global_hotkey {
-            if demo_auto.is_none()
-                && let Some(termvox_hotkeys::TriggerState::Pressed) = registration.poll()
-            {
+            if let Some(termvox_hotkeys::TriggerState::Pressed) = registration.poll() {
                 toggle_voice(
                     config,
-                    speech.ok_or_else(|| {
-                        anyhow::anyhow!("speech engine required for voice capture")
-                    })?,
+                    speech,
                     &rt,
                     &mut recorder,
                     &mut bar,
@@ -337,14 +289,12 @@ fn run_session(
                 running = false;
             }
             Event::Key(key) if keys::is_voice_hotkey(&key, &voice_hotkeys) => {
-                if awaiting_confirm.is_some() || demo_auto.is_some() {
+                if awaiting_confirm.is_some() {
                     continue;
                 }
                 toggle_voice(
                     config,
-                    speech.ok_or_else(|| {
-                        anyhow::anyhow!("speech engine required for voice capture")
-                    })?,
+                    speech,
                     &rt,
                     &mut recorder,
                     &mut bar,

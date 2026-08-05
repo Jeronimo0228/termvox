@@ -12,13 +12,8 @@ in minor or patch increments and must be called out explicitly.
 
 ### Added
 
-- **`termvox shell --demo` / `--demo-auto`**: real mic bar + bundled fake agent TUI for marketing recordings
-- Shell demo pipeline: `scripts/record-shell-demo-4k.sh`, `scripts/demo-agent-tui.sh`
-- Shell demo assets: `termvox-shell-demo.cast/gif`, `termvox-demo-shell-4k.mp4`; LinkedIn cut now shows integrated shell UI
-- 4K VHS demo videos: `docs/assets/termvox-demo-4k.mp4` and `termvox-demo-4k-linkedin.mp4` (~59s)
-- `scripts/render-demo-4k.sh`, `scripts/vhs-demo.sh`, `docs/assets/termvox-demo.tape`
 - Launch checklist: `docs/demo.md`, beta tester checklist, LinkedIn post draft (ES)
-- `scripts/launch-smoke.sh`, `scripts/record-demo.sh`, beta feedback issue template
+- `scripts/launch-smoke.sh`, beta feedback issue template
 
 ### Changed
 
