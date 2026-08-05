@@ -7,22 +7,22 @@
 
 ## Texto sugerido
 
-**HABLA.** Al agente. En la terminal. Sin salir del TUI.
+(El video es solo demo en terminal — este texto va en el post, no en pantalla.)
 
-Estoy lanzando **TermVox** en alpha: una capa de **voz local** para coding agents (Cursor, OpenCode, Claude Code, Codex…).
+Estoy lanzando **TermVox** en alpha: voz local para coding agents en la terminal
+(Cursor, OpenCode, Claude Code, Codex…).
 
-Hablas → **Whisper** en tu máquina (sin API key de speech) → confirmas → el agente lo recibe en el mismo TUI.
-
-No es otro chatbot. Es push-to-talk con mic bar integrada: **F8 / Ctrl+Space**.
+Hablas → **Whisper** on-device → confirmas → el agente lo recibe en el mismo TUI
+(`termvox shell`, F8 / Ctrl+Space).
 
 ```bash
 npm install -g termvox
 termvox shell --agent opencode
 ```
 
-Alpha temprana — busco early adopters que ya vivan en agent CLIs.
+Alpha temprana — busco early adopters.
 
-Repo: https://github.com/Jeronimo0228/termvox
+Repo: https://github.com/Jeronimo0228/termvox  
 npm: https://www.npmjs.com/package/termvox
 
 #BuildInPublic #OpenSource #Rust #DeveloperTools #AI #Voice #CLI #Cursor #OpenCode
@@ -44,7 +44,7 @@ https://github.com/Jeronimo0228/termvox
 ## Checklist antes de publicar
 
 - [ ] Video de 45–90 s grabado con OBS (ver [demo.md](demo.md))
-- [ ] Empaquetado con `scripts/render-linkedin-demo.py` → subir el **1080p**
+- [ ] Cut práctico (sin texto en video) con `scripts/render-linkedin-demo.py` → **1080p**
 - [ ] Probaste el happy path hoy en tu máquina
 - [ ] 2+ beta testers reportaron (aunque sea “funciona en Linux”)
 - [ ] Primer comentario fijado con link a `docs/demo.md` o quick start

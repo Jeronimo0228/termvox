@@ -63,10 +63,10 @@ Tips:
 - Pre-run `termvox doctor` and `termvox test --seconds 2` so Whisper is warm.
 - If Cursor/OpenCode auth fails, switch to whichever agent shows `[ok]` in doctor.
 
-### 3. Package for LinkedIn (intro / captions / 4K)
+### 3. Package for LinkedIn / pitch (practical cut)
 
-From the repo, wrap your screen recording with a crisp TermVox terminal intro,
-lower-thirds, and outro:
+Export a clean **terminal-only** cut — no title cards, no captions, no on-screen
+marketing copy. Letterbox + light grade to 4K / 1080p:
 
 ```bash
 /usr/bin/python3.14 scripts/render-linkedin-demo.py \
@@ -76,9 +76,11 @@ lower-thirds, and outro:
 
 Outputs:
 
-- `termvox-linkedin-4k.mp4` — archive / YouTube master (3840×2160)
-- `termvox-linkedin-1080p.mp4` — **preferred LinkedIn upload** (LinkedIn
-  recompresses heavily; 1080p often looks cleaner in-feed)
+- `termvox-linkedin-4k.mp4` — archive master (3840×2160)
+- `termvox-linkedin-1080p.mp4` — **preferred upload** for LinkedIn / decks
+
+Keep the pitch text in the LinkedIn post body ([linkedin-post-es.md](linkedin-post-es.md)),
+not burned into the video.
 
 ### Pre-flight checks
 
