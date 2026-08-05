@@ -1,6 +1,6 @@
 # Release readiness
 
-TermVox is published as **`0.1.0-alpha.13`** (alpha). This page tracks what is
+TermVox is published as **`0.1.0-alpha.14`** (alpha). This page tracks what is
 already shipped versus what still needs manual evidence before a beta or V1 claim.
 
 ## Published today

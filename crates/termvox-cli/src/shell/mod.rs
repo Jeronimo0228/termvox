@@ -32,8 +32,8 @@ use crate::workspace;
 use tokio_util::sync::CancellationToken;
 
 use crate::runtime::{
-    configured_cli_agent_kind, ensure_agent_authenticated, ensure_speech_engine, prepare_utterance,
-    schedule_prewarm,
+    configured_cli_agent_kind, ensure_agent_authenticated, ensure_speech_engine,
+    prepare_utterance,
 };
 
 use self::bar::{BarState, ShellBar};
@@ -58,9 +58,9 @@ pub async fn run(
     }
     ensure_agent_authenticated(&info)?;
     let speech = ensure_speech_engine(&config).await?;
-    schedule_prewarm(Arc::clone(&speech), &config.whisper);
     let cwd = std::env::current_dir()?;
     let profile = config.agents.profile(agent);
+    let allow_discover = config.workspace.discover_session && !fresh;
     let remote_id = if fresh {
         None
     } else {
@@ -75,7 +75,16 @@ pub async fn run(
     let config = Arc::new(config);
     let supported = to_supported(agent);
     tokio::task::spawn_blocking(move || {
-        run_session(&config, agent, supported, &launch, &speech, &cwd, remote_id)
+        run_session(
+            &config,
+            agent,
+            supported,
+            &launch,
+            &speech,
+            &cwd,
+            remote_id,
+            allow_discover,
+        )
     })
     .await
     .context("shell session task failed")?
@@ -90,6 +99,7 @@ fn run_session(
     speech: &Arc<dyn SpeechEngine>,
     cwd: &std::path::Path,
     resumed_remote_id: Option<String>,
+    allow_discover: bool,
 ) -> Result<()> {
     let rt = tokio::runtime::Handle::current();
     terminal::enable_raw_mode().context("enable raw mode")?;
@@ -175,24 +185,28 @@ fn run_session(
     let mut last_bar_draw = Instant::now();
     let mut last_persist = Instant::now();
     let mut running = true;
+    let mut speech_prewarmed = false;
 
-    let discover_agent = supported;
-    let discover_cwd = cwd.to_path_buf();
-    let discover_target = Arc::clone(&captured_remote);
-    let discover_stop = Arc::clone(&stop_reader);
-    thread::spawn(move || {
-        while !discover_stop.load(Ordering::Acquire) {
-            if discover_target.lock().expect("session mutex").is_some() {
-                break;
+    if allow_discover {
+        let discover_agent = supported;
+        let discover_cwd = cwd.to_path_buf();
+        let discover_target = Arc::clone(&captured_remote);
+        let discover_stop = Arc::clone(&stop_reader);
+        thread::spawn(move || {
+            while !discover_stop.load(Ordering::Acquire) {
+                if discover_target.lock().expect("session mutex").is_some() {
+                    break;
+                }
+                if let Some(id) =
+                    termvox_agents::discover_remote_session(discover_agent, &discover_cwd)
+                {
+                    *discover_target.lock().expect("session mutex") = Some(id);
+                    break;
+                }
+                thread::sleep(Duration::from_secs(5));
             }
-            if let Some(id) = termvox_agents::discover_remote_session(discover_agent, &discover_cwd)
-            {
-                *discover_target.lock().expect("session mutex") = Some(id);
-                break;
-            }
-            thread::sleep(Duration::from_secs(5));
-        }
-    });
+        });
+    }
 
     while running {
         if exit_rx.try_recv().is_ok() {
@@ -255,6 +269,7 @@ fn run_session(
                     &mut awaiting_confirm,
                     &mut anim_frame,
                     &mut last_bar_draw,
+                    &mut speech_prewarmed,
                 )?;
             }
         }
@@ -301,6 +316,7 @@ fn run_session(
                     &mut awaiting_confirm,
                     &mut anim_frame,
                     &mut last_bar_draw,
+                    &mut speech_prewarmed,
                 )?;
             }
             Event::Key(key) => {
@@ -364,11 +380,16 @@ fn toggle_voice(
     awaiting_confirm: &mut Option<String>,
     anim_frame: &mut u8,
     last_bar_draw: &mut Instant,
+    speech_prewarmed: &mut bool,
 ) -> Result<()> {
     if let Some(recorder_handle) = recorder.take() {
         let audio = rt.block_on(recorder_handle.stop())?;
         handle_finished_recording(config, speech, rt, bar, writer, awaiting_confirm, audio)?;
     } else {
+        if !*speech_prewarmed {
+            let _ = rt.block_on(speech.prewarm());
+            *speech_prewarmed = true;
+        }
         *recorder = Some(AudioRecorder::start(&config.audio)?);
         bar.set_state(BarState::Recording);
         *anim_frame = 0;

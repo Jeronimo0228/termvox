@@ -140,16 +140,26 @@ fn load_whisper_context(
     whisper_rs::install_logging_hooks();
     let mut parameters = WhisperContextParameters::default();
     parameters.use_gpu(config.use_gpu);
-    let loaded = Arc::new(
+    let loaded = Arc::new(suppress_stderr(|| {
         WhisperContext::new_with_params(&config.model, parameters).map_err(|error| {
             TermVoxError::Speech(format!(
                 "failed to load Whisper model {}: {error}",
                 config.model.display()
             ))
-        })?,
-    );
+        })
+    })?);
     *cached = Some(Arc::clone(&loaded));
     Ok(loaded)
+}
+
+/// ggml may `fprintf` directly to stderr (e.g. AMX init) — keep agent TUIs clean.
+#[cfg(feature = "embedded-whisper")]
+fn suppress_stderr<F, T>(operation: F) -> T
+where
+    F: FnOnce() -> T,
+{
+    let _guard = gag::Gag::stderr().ok();
+    operation()
 }
 
 #[cfg(feature = "embedded-whisper")]
