@@ -91,12 +91,6 @@ enum Commands {
         /// Ignore saved workspace session and start the upstream agent fresh.
         #[arg(long)]
         fresh: bool,
-        /// Run a bundled fake agent TUI for demo recordings (no upstream CLI required).
-        #[arg(long)]
-        demo: bool,
-        /// Play a scripted voice flow automatically (requires `--demo`; for video capture).
-        #[arg(long)]
-        demo_auto: bool,
         #[arg(last = true, allow_hyphen_values = true)]
         agent_args: Vec<String>,
     },
@@ -246,8 +240,6 @@ pub(crate) async fn run() -> Result<()> {
         Commands::Shell {
             agent,
             fresh,
-            demo,
-            demo_auto,
             agent_args,
         } => {
             let config = setup::load_config(cli.config.as_deref())?;
@@ -255,7 +247,7 @@ pub(crate) async fn run() -> Result<()> {
                 Some(value) => shim::parse_agent_kind(&value)?,
                 None => config.agent,
             };
-            shell::run(config, kind, agent_args, fresh, demo, demo_auto).await?;
+            shell::run(config, kind, agent_args, fresh).await?;
         }
         Commands::InstallShim { agent, force } => {
             let config = setup::load_config(cli.config.as_deref())?;
