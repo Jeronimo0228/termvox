@@ -44,7 +44,7 @@ https://github.com/Jeronimo0228/termvox
 
 ## Checklist antes de publicar
 
-- [ ] Video de 45–90 s adjunto (no solo enlace externo)
+- [ ] Video de 45–90 s adjunto — usar `docs/assets/termvox-demo-4k-linkedin.mp4` o grabar OBS
 - [ ] Probaste el happy path hoy en tu máquina
 - [ ] 2+ beta testers reportaron (aunque sea “funciona en Linux”)
 - [ ] Primer comentario fijado con link a `docs/demo.md` o quick start

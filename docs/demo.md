@@ -3,6 +3,25 @@
 Use this page to record a LinkedIn demo, onboard beta testers, and verify the
 **happy path** before a public post.
 
+## Pre-rendered 4K demo (VHS)
+
+A terminal demo is checked into the repo (regenerate anytime):
+
+| File | Use |
+| --- | --- |
+| [`docs/assets/termvox-demo-4k-linkedin.mp4`](assets/termvox-demo-4k-linkedin.mp4) | **~59 s, 3840×2160** — attach to LinkedIn |
+| [`docs/assets/termvox-demo-4k.mp4`](assets/termvox-demo-4k.mp4) | ~16 s raw VHS render |
+
+Regenerate (requires [VHS](https://github.com/charmbracelet/vhs), `ffmpeg`, `go`):
+
+```bash
+bash scripts/render-demo-4k.sh
+```
+
+Edit the storyboard in `docs/assets/termvox-demo.tape`. Real `termvox doctor` and
+`termvox test` output is captured when a mic is available; shell flow is shown
+with on-screen annotations (non-interactive in VHS).
+
 ## Happy path (recommended first install)
 
 Target audience: developers who already use **Cursor CLI** or **OpenCode** on
@@ -85,6 +104,8 @@ bash scripts/launch-smoke.sh         # CI-style happy-path checks
 ```
 
 Upload the video to LinkedIn directly (native video gets more reach than YouTube links).
+
+**Shortcut:** use [`docs/assets/termvox-demo-4k-linkedin.mp4`](assets/termvox-demo-4k-linkedin.mp4) (~59 s, 4K) or re-render with `bash scripts/render-demo-4k.sh`.
 
 ## Beta tester checklist
 
