@@ -10,6 +10,8 @@ in minor or patch increments and must be called out explicitly.
 
 ## [Unreleased]
 
+## [0.1.0-alpha.11] - 2026-08-05
+
 ### Added
 
 - Launch checklist: `docs/demo.md`, beta tester checklist, LinkedIn post draft (ES)
@@ -18,6 +20,9 @@ in minor or patch increments and must be called out explicitly.
 ### Changed
 
 - `docs/compatibility.md` aligned with npm releases, Sigstore, and alpha limitations
+- Removed in-repo video pipeline; LinkedIn demo is manual OBS capture (see `docs/demo.md`)
+
+[0.1.0-alpha.11]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.10...v0.1.0-alpha.11
 
 ## [0.1.0-alpha.10] - 2026-07-31
 
@@ -101,7 +106,7 @@ in minor or patch increments and must be called out explicitly.
 - Mic bar redraw during transcribing and after upstream TUI repaints
 - Clippy and docs for workspace session store APIs
 
-[Unreleased]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.9...main
+[Unreleased]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.11...main
 [0.1.0-alpha.8]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.7...v0.1.0-alpha.8
 [0.1.0-alpha.7]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.6...v0.1.0-alpha.7
 

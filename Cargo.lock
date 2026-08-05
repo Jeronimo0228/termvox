@@ -2509,7 +2509,7 @@ dependencies = [
 
 [[package]]
 name = "termvox"
-version = "0.1.0-alpha.10"
+version = "0.1.0-alpha.11"
 dependencies = [
  "anyhow",
  "arboard",
@@ -2536,7 +2536,7 @@ dependencies = [
 
 [[package]]
 name = "termvox-agents"
-version = "0.1.0-alpha.10"
+version = "0.1.0-alpha.11"
 dependencies = [
  "async-trait",
  "dirs",
@@ -2551,7 +2551,7 @@ dependencies = [
 
 [[package]]
 name = "termvox-audio"
-version = "0.1.0-alpha.10"
+version = "0.1.0-alpha.11"
 dependencies = [
  "async-trait",
  "cpal",
@@ -2565,7 +2565,7 @@ dependencies = [
 
 [[package]]
 name = "termvox-core"
-version = "0.1.0-alpha.10"
+version = "0.1.0-alpha.11"
 dependencies = [
  "async-trait",
  "dirs",
@@ -2581,14 +2581,14 @@ dependencies = [
 
 [[package]]
 name = "termvox-hotkeys"
-version = "0.1.0-alpha.10"
+version = "0.1.0-alpha.11"
 dependencies = [
  "global-hotkey",
 ]
 
 [[package]]
 name = "termvox-plugin-sdk"
-version = "0.1.0-alpha.10"
+version = "0.1.0-alpha.11"
 dependencies = [
  "async-trait",
  "serde",
@@ -2601,7 +2601,7 @@ dependencies = [
 
 [[package]]
 name = "termvox-speech"
-version = "0.1.0-alpha.10"
+version = "0.1.0-alpha.11"
 dependencies = [
  "async-trait",
  "hex",

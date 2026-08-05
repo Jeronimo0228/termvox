@@ -3,7 +3,7 @@
   "private": true,
   "displayName": "TermVox",
   "description": "Voice prompts for Cursor and other coding agents via TermVox.",
-  "version": "0.1.0-alpha.10",
+  "version": "0.1.0-alpha.11",
   "publisher": "termvox",
   "license": "MIT",
   "engines": {
