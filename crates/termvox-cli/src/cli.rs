@@ -174,7 +174,7 @@ See docs/agent-shell.md and docs/es/stt.md."
         #[arg(last = true, allow_hyphen_values = true)]
         agent_args: Vec<String>,
     },
-    /// Install ~/.local/bin/<agent> wrapper that runs termvox shell (Unix)
+    /// Install `~/.local/bin/<agent>` wrapper that runs termvox shell (Unix)
     InstallShim {
         /// Agent to wrap (default: configured agent)
         #[arg(long, value_name = "AGENT")]
