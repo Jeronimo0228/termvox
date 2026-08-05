@@ -65,8 +65,12 @@ Tips:
 
 ### 3. Package for LinkedIn / pitch (practical cut)
 
-Export a clean **terminal-only** cut — no title cards, no captions, no on-screen
-marketing copy. Letterbox + light grade to 4K / 1080p:
+Builds a **terminal-only** pitch video:
+
+1. Animated setup: `init` → `config show` → `models install` → `doctor` → `shell`
+2. Your screen recording (full width, light grade; ANSI glitch fragments covered)
+
+No marketing title cards or burned-in captions.
 
 ```bash
 /usr/bin/python3.14 scripts/render-linkedin-demo.py \
