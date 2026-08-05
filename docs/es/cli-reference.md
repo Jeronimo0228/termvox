@@ -7,6 +7,11 @@ termvox [--config RUTA] COMANDO
 `--config RUTA` selecciona un archivo de configuración del proyecto. La
 configuración global se carga primero.
 
+La ayuda integrada (`termvox --help`, `termvox <cmd> --help`) y
+`termvox manpage` salen de las mismas definiciones Clap. Para calidad de STT
+(`performance_profile`, modelos Whisper), ver [STT](stt.md) y
+[Performance](../performance.md).
+
 ## Comandos
 
 ### `termvox init [--global] [--force] [--preset PRESET]`
@@ -61,6 +66,9 @@ No descubre ni instala plugins.
 - `path` — rutas global y de proyecto
 - `show` — TOML fusionado sin secretos
 - `validate` — parsea, fusiona y valida restricciones
+
+Claves útiles de STT: `performance_profile`, `language`, `[whisper]`, `[audio]`.
+Ver [STT](stt.md).
 
 ### `termvox test [--seconds N]`
 
@@ -118,9 +126,18 @@ Reporte JSON de latencia (P50/P95) del modelo Whisper configurado.
 
 Información de versión y releases; no instala actualizaciones automáticamente.
 
-### `termvox completions SHELL` / `termvox manpage [--output RUTA]`
+### `termvox completions SHELL`
 
-Completions y página de manual.
+Escribe completions a stdout para bash/zsh/fish/powershell/elvish.
+
+### `termvox manpage [--output RUTA]`
+
+Genera la página man `termvox(1)` desde la definición Clap. Ejemplo:
+
+```bash
+termvox manpage --output ~/.local/share/man/man1/termvox.1
+man termvox
+```
 
 ## Registro
 

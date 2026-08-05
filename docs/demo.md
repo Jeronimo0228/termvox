@@ -12,7 +12,7 @@ Linux or macOS.
 npm install -g termvox
 termvox doctor
 termvox init --preset cursor    # or: --preset opencode
-termvox models install default  # ~74 MiB, skipped if postinstall ran
+termvox models install default  # ~74 MiB; use `accurate` for better STT
 cd your-project
 termvox shell --agent cursor    # or: --agent opencode
 ```
@@ -33,19 +33,27 @@ Quick mic test without an agent:
 termvox test --seconds 3
 ```
 
+STT quality: see [performance.md](performance.md) and [es/stt.md](es/stt.md).
+
 ## Record a 45–90 second LinkedIn video
 
-Record manually with **OBS Studio** (or similar): full screen + mic, export MP4,
-and upload natively to LinkedIn.
+### 1. Capture (OBS / GNOME)
 
-### What to show (storyboard)
+Record the shell session manually with **OBS Studio** (preferred) or the desktop
+recorder. Aim for **1920×1080 or 3840×2160**, **≥30 fps**, and a bitrate high
+enough that terminal text stays sharp (OBS: x264, CRF ~18, or CBR ≥12 Mbps at
+1080p). Export MP4.
+
+GNOME’s built-in recorder often produces **low-bitrate / low-fps** clips that
+look soft when upscaled — prefer OBS for the public cut.
+
+### 2. What to show (storyboard)
 
 1. **Hook (5 s)** — Terminal with project open; say what you are about to do.
 2. **Install (10 s)** — `npm install -g termvox` (or skip if pre-installed).
 3. **Doctor (10 s)** — `termvox doctor` with green mic + speech lines.
-4. **Shell (30–50 s)** — `termvox shell`; press F8, speak one sentence
-   (*"Add error handling to the login function"*), show transcript + confirm,
-   agent starts working.
+4. **Shell (30–50 s)** — `termvox shell`; press F8, speak one sentence, show
+   transcript + confirm, agent starts working.
 5. **Close (5 s)** — Repo URL + *"alpha preview — feedback welcome"*.
 
 Tips:
@@ -55,10 +63,28 @@ Tips:
 - Pre-run `termvox doctor` and `termvox test --seconds 2` so Whisper is warm.
 - If Cursor/OpenCode auth fails, switch to whichever agent shows `[ok]` in doctor.
 
+### 3. Package for LinkedIn (intro / captions / 4K)
+
+From the repo, wrap your screen recording with a crisp TermVox terminal intro,
+lower-thirds, and outro:
+
+```bash
+/usr/bin/python3.14 scripts/render-linkedin-demo.py \
+  --source "$HOME/Vídeos/Grabaciones de la pantalla/tu-grabacion.mp4" \
+  --out-dir "$HOME/Vídeos/termvox-demo"
+```
+
+Outputs:
+
+- `termvox-linkedin-4k.mp4` — archive / YouTube master (3840×2160)
+- `termvox-linkedin-1080p.mp4` — **preferred LinkedIn upload** (LinkedIn
+  recompresses heavily; 1080p often looks cleaner in-feed)
+
 ### Pre-flight checks
 
 ```bash
 bash scripts/launch-smoke.sh         # CI-style happy-path checks
+termvox --help                       # CLI help + manpage share the same copy
 ```
 
 Upload the video to LinkedIn directly (native video gets more reach than YouTube links).

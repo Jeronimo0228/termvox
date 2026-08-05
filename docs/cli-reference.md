@@ -7,15 +7,25 @@ termvox [--config PATH] COMMAND
 `--config PATH` selects a project-layer configuration file. The global
 configuration is still loaded first.
 
+Built-in help (`termvox --help`, `termvox <cmd> --help`) and
+`termvox manpage` are generated from the same Clap definitions. For speech
+quality (`performance_profile`, Whisper models), see [Performance](performance.md)
+and [Spanish STT guide](es/stt.md).
+
 ## Commands
 
-### `termvox init [--global] [--force]`
+### `termvox init [--global] [--force] [--preset PRESET]`
 
 Writes the built-in defaults to `termvox.toml`, or to the OS configuration
 directory with `--global`. Existing files are preserved unless `--force` is
-explicitly supplied.
+explicitly supplied. Presets: `cursor`, `codex`, `claude`, `gemini`,
+`opencode`, `rust-web`.
 
-### `termvox setup [--global] [--force]`
+```bash
+termvox init --preset cursor --force
+```
+
+### `termvox setup [--global] [--force] [--preset PRESET]`
 
 In an interactive terminal, prompts for language, push-to-talk key, speech
 engine, and agent, then writes configuration. With non-terminal stdin, it
@@ -61,6 +71,9 @@ The command does not discover or install plugins.
 - `show` (the default): print the merged, non-secret TOML configuration
 - `validate`: parse, merge, and check supported value and audio constraints
 
+Useful STT keys in the merged config: `performance_profile`, `language`,
+`[whisper]`, `[audio]`. See [Performance](performance.md).
+
 ### `termvox test [--seconds N]`
 
 Records for a fixed duration (default: three seconds), trims low-energy edges,
@@ -82,17 +95,7 @@ authentication; another process running as the same OS user can manipulate it.
 ### `termvox models list`
 
 Lists release-reviewed model artifacts from the bundled manifest, including the
-default embedded Whisper base model and optional sidecar models.
-
-### `termvox init [--global] [--force] [--preset PRESET]`
-
-Creates a starter config. Presets: `cursor`, `codex`, `claude`, `gemini`, `opencode`, `rust-web`.
-
-Example:
-
-```bash
-termvox init --preset cursor --force
-```
+default Whisper tiny model and the larger accurate (base) artifact.
 
 ### `termvox shell [--agent AGENT] [--fresh] [--] [ARGS...]`
 
@@ -166,7 +169,14 @@ the output to the location required by your shell.
 
 ### `termvox manpage [--output PATH]`
 
-Renders a manual page to stdout or writes it to `PATH`.
+Renders a manual page to stdout or writes it to `PATH`. Install locally, for
+example:
+
+```bash
+termvox manpage --output ~/.local/share/man/man1/termvox.1
+mandb ~/.local/share/man 2>/dev/null || true
+man termvox
+```
 
 ## Logging
 

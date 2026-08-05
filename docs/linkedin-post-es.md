@@ -45,6 +45,7 @@ https://github.com/Jeronimo0228/termvox
 ## Checklist antes de publicar
 
 - [ ] Video de 45–90 s grabado con OBS (ver [demo.md](demo.md))
+- [ ] Empaquetado con `scripts/render-linkedin-demo.py` → subir el **1080p**
 - [ ] Probaste el happy path hoy en tu máquina
 - [ ] 2+ beta testers reportaron (aunque sea “funciona en Linux”)
 - [ ] Primer comentario fijado con link a `docs/demo.md` o quick start

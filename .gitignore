@@ -1,10 +1,13 @@
 /target/
 .termvox/
-/termvox.toml
-**/termvox.toml
+termvox.toml
 !examples/termvox.toml
 !termvox.toml.example
 *.wav
+# Local LinkedIn / OBS exports (keep scripts, ignore media)
+/demo-out/
+*.mp4
+!docs/**/*.mp4
 *.bin
 *.download
 *.cdx.json

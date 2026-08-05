@@ -14,6 +14,8 @@ in minor or patch increments and must be called out explicitly.
 
 - STT documentation: performance profiles, VAD tuning, model install, Spanish guide
   (`docs/performance.md`, `docs/es/stt.md`, examples + troubleshooting links)
+- Rich CLI `--help` / `termvox manpage` copy (shell, models, config, doctor, STT tips)
+- LinkedIn demo render script: `scripts/render-linkedin-demo.py`
 
 ## [0.1.0-alpha.15] - 2026-08-05
 
