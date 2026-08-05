@@ -215,10 +215,8 @@ mod tests {
 
     #[test]
     fn opencode_does_not_fall_back_to_global_latest_session() {
-        let dir = std::env::temp_dir().join(format!(
-            "termvox-opencode-global-{}",
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("termvox-opencode-global-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("temp dir");
         let db = dir.join("opencode.db");

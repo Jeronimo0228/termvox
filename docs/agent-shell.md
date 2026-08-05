@@ -60,10 +60,6 @@ termvox shell --agent opencode   # OpenCode TUI + mic bar
 termvox shell --fresh            # ignore saved workspace session
 ```
 
-When `[workspace].persist_session` is enabled (default), TermVox saves the
-upstream session id to `.termvox/session.json` and passes resume flags on the
-next launch in the same project directory.
-
 Example layout:
 
 ```text

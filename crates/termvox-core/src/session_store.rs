@@ -68,7 +68,8 @@ impl WorkspaceSession {
         let version = value
             .get("version")
             .and_then(serde_json::Value::as_u64)
-            .unwrap_or(1) as u32;
+            .and_then(|n| u32::try_from(n).ok())
+            .unwrap_or(1);
         match version {
             STORE_VERSION => {
                 let session: Self = serde_json::from_value(value).map_err(|error| {
@@ -77,9 +78,10 @@ impl WorkspaceSession {
                 Ok(Some(session))
             }
             1 => {
-                let legacy: WorkspaceSessionV1 = serde_json::from_value(value).map_err(
-                    |error| TermVoxError::Config(format!("parse {}: {error}", path.display())),
-                )?;
+                let legacy: WorkspaceSessionV1 =
+                    serde_json::from_value(value).map_err(|error| {
+                        TermVoxError::Config(format!("parse {}: {error}", path.display()))
+                    })?;
                 Ok(Some(migrate_v1(legacy)))
             }
             _ => Ok(None),
@@ -120,10 +122,7 @@ impl WorkspaceSession {
 
     #[must_use]
     pub fn matches_workspace(&self, cwd: &Path) -> bool {
-        let stored = self
-            .cwd
-            .canonicalize()
-            .unwrap_or_else(|_| self.cwd.clone());
+        let stored = self.cwd.canonicalize().unwrap_or_else(|_| self.cwd.clone());
         let current = cwd.canonicalize().unwrap_or_else(|_| cwd.to_path_buf());
         stored == current
     }
@@ -155,7 +154,8 @@ mod tests {
 
     #[test]
     fn matches_canonicalizes_workspace_root() {
-        let dir = std::env::temp_dir().join(format!("termvox-session-match-{}", uuid::Uuid::new_v4()));
+        let dir =
+            std::env::temp_dir().join(format!("termvox-session-match-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).expect("temp dir");
         let session = WorkspaceSession::new(dir.clone());
         assert!(session.matches_workspace(&dir));

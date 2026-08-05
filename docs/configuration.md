@@ -194,15 +194,15 @@ discover_session = true
 session_file = ".termvox/session.json"   # optional relative override
 ```
 
-When `persist_session` is enabled, TermVox stores the upstream agent session id
-under your project directory (`.termvox/session.json`, gitignored by default) and
-reuses it the next time you open the same workspace — in `termvox shell`,
-`termvox start` with `display = "shell"`, or the default branded subprocess mode.
-Use `termvox shell --fresh` to ignore the saved session.
+When `persist_session` is enabled, TermVox stores upstream session ids **per
+agent** under your project directory (`.termvox/session.json` v2, gitignored by
+default) and reuses the matching id the next time you open the same workspace —
+in `termvox shell`, `termvox start` with `display = "shell"`, or branded mode.
+Use `termvox shell --fresh` to ignore the saved session and skip discovery.
 
 When no saved id exists, `discover_session` (default `true`) probes agent-local
-stores (Cursor transcripts, OpenCode sqlite, Claude projects) and PTY output
-heuristics to resume the latest chat for the current directory.
+stores scoped to the current directory (Cursor transcripts, OpenCode sqlite,
+Claude projects) — never a global “latest session” from another workspace.
 
 The mic bar is redrawn continuously so upstream TUIs (Cursor, OpenCode, etc.)
 cannot erase it. Use `exit_hotkey` to return to your normal shell.

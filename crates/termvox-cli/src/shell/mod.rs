@@ -32,8 +32,7 @@ use crate::workspace;
 use tokio_util::sync::CancellationToken;
 
 use crate::runtime::{
-    configured_cli_agent_kind, ensure_agent_authenticated, ensure_speech_engine,
-    prepare_utterance,
+    configured_cli_agent_kind, ensure_agent_authenticated, ensure_speech_engine, prepare_utterance,
 };
 
 use self::bar::{BarState, ShellBar};
