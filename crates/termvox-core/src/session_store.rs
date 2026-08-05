@@ -83,7 +83,15 @@ impl WorkspaceSession {
 
     #[must_use]
     pub fn matches(&self, agent: AgentKind, cwd: &Path) -> bool {
-        self.agent == agent && self.cwd == cwd
+        if self.agent != agent {
+            return false;
+        }
+        let stored = self
+            .cwd
+            .canonicalize()
+            .unwrap_or_else(|_| self.cwd.clone());
+        let current = cwd.canonicalize().unwrap_or_else(|_| cwd.to_path_buf());
+        stored == current
     }
 }
 
@@ -96,6 +104,23 @@ fn unix_now() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn matches_canonicalizes_cwd() {
+        let dir = std::env::temp_dir().join(format!("termvox-session-match-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let session = WorkspaceSession::new(AgentKind::OpenCode, dir.clone());
+        assert!(session.matches(AgentKind::OpenCode, &dir));
+        #[cfg(unix)]
+        {
+            let link = dir.with_extension("link");
+            let _ = std::fs::remove_file(&link);
+            std::os::unix::fs::symlink(&dir, &link).expect("symlink");
+            assert!(session.matches(AgentKind::OpenCode, &link));
+            let _ = std::fs::remove_file(link);
+        }
+        let _ = std::fs::remove_dir_all(dir);
+    }
 
     #[test]
     fn round_trips_workspace_session() {

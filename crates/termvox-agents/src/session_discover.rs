@@ -60,8 +60,21 @@ fn discover_opencode(cwd: &Path) -> Option<String> {
     .or_else(|| {
         query_sqlite(
             &db,
-            "SELECT id FROM session ORDER BY time_updated DESC LIMIT 1;",
-            &[],
+            "SELECT s.id FROM session s
+             INNER JOIN project p ON s.project_id = p.id
+             WHERE p.worktree = ?1
+             ORDER BY s.time_updated DESC LIMIT 1;",
+            &[&cwd_string],
+        )
+    })
+    .or_else(|| {
+        query_sqlite(
+            &db,
+            "SELECT s.id FROM session s
+             INNER JOIN project_directory pd ON s.project_id = pd.project_id
+             WHERE pd.directory = ?1
+             ORDER BY s.time_updated DESC LIMIT 1;",
+            &[&cwd_string],
         )
     })
 }
@@ -180,6 +193,78 @@ mod tests {
             scan_output_for_session_id(SupportedAgent::Cursor, sample),
             Some("96f670e8-613e-4277-9c0e-ef4a9a118683".into())
         );
+    }
+
+    #[test]
+    fn opencode_does_not_fall_back_to_global_latest_session() {
+        let dir = std::env::temp_dir().join(format!(
+            "termvox-opencode-global-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let db = dir.join("opencode.db");
+        let connection = Connection::open(&db).expect("open db");
+        connection
+            .execute_batch(
+                "CREATE TABLE session (
+                    id TEXT PRIMARY KEY,
+                    project_id TEXT,
+                    directory TEXT NOT NULL,
+                    time_updated INTEGER NOT NULL
+                );
+                CREATE TABLE project (
+                    id TEXT PRIMARY KEY,
+                    worktree TEXT NOT NULL
+                );
+                CREATE TABLE project_directory (
+                    project_id TEXT NOT NULL,
+                    directory TEXT NOT NULL
+                );",
+            )
+            .expect("schema");
+        connection
+            .execute(
+                "INSERT INTO session (id, project_id, directory, time_updated) VALUES (?1, ?2, ?3, ?4);",
+                rusqlite::params!["ses_home_global", "global", "/home/user", 200_i64],
+            )
+            .expect("insert home");
+        connection
+            .execute(
+                "INSERT INTO project (id, worktree) VALUES (?1, ?2);",
+                rusqlite::params!["proj_a", "/tmp/project-a"],
+            )
+            .expect("insert project");
+        connection
+            .execute(
+                "INSERT INTO session (id, project_id, directory, time_updated) VALUES (?1, ?2, ?3, ?4);",
+                rusqlite::params!["ses_project_a", "proj_a", "/tmp/project-a", 100_i64],
+            )
+            .expect("insert project session");
+
+        // Without a matching workspace, never resume the newer global/home session.
+        assert_eq!(
+            query_sqlite(
+                &db,
+                "SELECT id FROM session WHERE directory = ?1 ORDER BY time_updated DESC LIMIT 1;",
+                &["/tmp/other-project"],
+            ),
+            None
+        );
+
+        assert_eq!(
+            query_sqlite(
+                &db,
+                "SELECT s.id FROM session s
+                 INNER JOIN project p ON s.project_id = p.id
+                 WHERE p.worktree = ?1
+                 ORDER BY s.time_updated DESC LIMIT 1;",
+                &["/tmp/project-a"],
+            ),
+            Some("ses_project_a".into())
+        );
+
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]

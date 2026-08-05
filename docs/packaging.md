@@ -24,7 +24,7 @@ curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/i
 Pin a version:
 
 ```bash
-TERMVOX_VERSION=v0.1.0-alpha.11 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
+TERMVOX_VERSION=v0.1.0-alpha.12 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
 ```
 
 ## From source (Cargo)
@@ -47,7 +47,7 @@ A third-party formula can wrap the release tarball:
 class Termvox < Formula
   desc "Voice bridge for coding-agent CLIs"
   homepage "https://github.com/Jeronimo0228/termvox"
-  url "https://github.com/Jeronimo0228/termvox/releases/download/v0.1.0-alpha.11/termvox-v0.1.0-alpha.11-x86_64-apple-darwin.tar.gz"
+  url "https://github.com/Jeronimo0228/termvox/releases/download/v0.1.0-alpha.12/termvox-v0.1.0-alpha.12-x86_64-apple-darwin.tar.gz"
   sha256 "REPLACE_WITH_RELEASE_SHA"
   license "MIT"
 
@@ -70,12 +70,12 @@ upstream tap publication is planned post-beta.
 2. Stage:
 
 ```text
-termvox_0.1.0-alpha.11_amd64/
+termvox_0.1.0-alpha.12_amd64/
   usr/local/bin/termvox
   usr/share/doc/termvox/copyright
 ```
 
-3. `dpkg-deb --build termvox_0.1.0-alpha.11_amd64`
+3. `dpkg-deb --build termvox_0.1.0-alpha.12_amd64`
 
 Whisper models are not bundled; run `termvox models install` after install.
 
