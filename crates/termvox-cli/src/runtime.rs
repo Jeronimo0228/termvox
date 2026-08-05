@@ -87,7 +87,7 @@ pub(crate) async fn start(
     let profile = config.agents.profile(config.agent);
     if profile.resolved_display(config.agent) == AgentDisplayMode::Shell {
         let kind = config.agent;
-        return crate::shell::run(config, kind, Vec::new(), false).await;
+        return crate::shell::run(config, kind, Vec::new(), false, false, false).await;
     }
     let speech = ensure_speech_engine(&config).await?;
     schedule_prewarm(Arc::clone(&speech), &config.whisper);

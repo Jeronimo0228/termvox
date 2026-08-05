@@ -3,24 +3,38 @@
 Use this page to record a LinkedIn demo, onboard beta testers, and verify the
 **happy path** before a public post.
 
-## Pre-rendered 4K demo (VHS)
+## Pre-rendered 4K demos
 
-A terminal demo is checked into the repo (regenerate anytime):
-
-| File | Use |
+| File | Content |
 | --- | --- |
-| [`docs/assets/termvox-demo-4k-linkedin.mp4`](assets/termvox-demo-4k-linkedin.mp4) | **~59 s, 3840×2160** — attach to LinkedIn |
-| [`docs/assets/termvox-demo-4k.mp4`](assets/termvox-demo-4k.mp4) | ~16 s raw VHS render |
+| [`termvox-demo-4k-linkedin.mp4`](assets/termvox-demo-4k-linkedin.mp4) | **~55 s, 3840×2160** — **real `termvox shell` mic bar** + OpenCode demo TUI |
+| [`termvox-demo-shell-4k.mp4`](assets/termvox-demo-shell-4k.mp4) | ~18 s raw shell recording (asciinema → 4K) |
+| [`termvox-demo-4k.mp4`](assets/termvox-demo-4k.mp4) | VHS tape (commands only, no mic bar) |
 
-Regenerate (requires [VHS](https://github.com/charmbracelet/vhs), `ffmpeg`, `go`):
+### Regenerate shell demo (recommended for LinkedIn)
+
+Shows the **integrated shell**: upstream agent area + TermVox mic bar on the last row
+(Listening → Transcribing → Confirm → injected prompt).
+
+```bash
+bash scripts/record-shell-demo-4k.sh opencode   # or: cursor, claude, codex
+```
+
+Uses `termvox shell --demo --demo-auto` (no real agent CLI required). Manual recording
+with real Cursor/OpenCode:
+
+```bash
+termvox shell --agent cursor          # real agent + mic bar; press F8 yourself
+termvox shell --demo --agent opencode # fake agent UI + real mic bar
+```
+
+Requires: `asciinema`, `ffmpeg`, Rust toolchain. Downloads `agg` into `.cache/bin/`.
+
+### Regenerate VHS command demo
 
 ```bash
 bash scripts/render-demo-4k.sh
 ```
-
-Edit the storyboard in `docs/assets/termvox-demo.tape`. Real `termvox doctor` and
-`termvox test` output is captured when a mic is available; shell flow is shown
-with on-screen annotations (non-interactive in VHS).
 
 ## Happy path (recommended first install)
 
@@ -105,7 +119,7 @@ bash scripts/launch-smoke.sh         # CI-style happy-path checks
 
 Upload the video to LinkedIn directly (native video gets more reach than YouTube links).
 
-**Shortcut:** use [`docs/assets/termvox-demo-4k-linkedin.mp4`](assets/termvox-demo-4k-linkedin.mp4) (~59 s, 4K) or re-render with `bash scripts/render-demo-4k.sh`.
+**Shortcut:** attach [`docs/assets/termvox-demo-4k-linkedin.mp4`](assets/termvox-demo-4k-linkedin.mp4) (~55 s, real mic bar) or re-render with `bash scripts/record-shell-demo-4k.sh`.
 
 ## Beta tester checklist
 
