@@ -1,13 +1,13 @@
 # Release readiness
 
-TermVox is published as **`0.1.0-alpha.15`** (alpha). This page tracks what is
+TermVox release train is **`0.1.0-alpha.16`** (alpha). This page tracks what is
 already shipped versus what still needs manual evidence before a beta or V1 claim.
 
 ## Published today
 
 | Channel | Status |
 | --- | --- |
-| [npm `termvox`](https://www.npmjs.com/package/termvox) | `latest` → alpha.10 (Trusted Publishing / OIDC) |
+| [npm `termvox`](https://www.npmjs.com/package/termvox) | `latest` → alpha.16 via release tag + OIDC Trusted Publishing |
 | [GitHub Releases](https://github.com/Jeronimo0228/termvox/releases) | Linux, macOS, Windows archives per tag |
 | CI on `main` | fmt, clippy, cross-platform tests, npm pack, supply-chain job |
 | Release workflow on tags | Multi-platform builds, SHA-256, Sigstore bundles, SBOM fallback |

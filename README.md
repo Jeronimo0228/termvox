@@ -39,7 +39,7 @@ and a <strong>confirmation gate</strong> before anything reaches an upstream CLI
   <code>npm install -g termvox && termvox shell</code>
 </p>
 
-> **Alpha (`0.1.0-alpha.15`).** APIs, config, and adapters may change between releases.
+> **Alpha (`0.1.0-alpha.16`).** APIs, config, and adapters may change between releases.
 > Run `termvox doctor` after installing or upgrading upstream agent CLIs.
 
 ## How it works
@@ -71,7 +71,7 @@ curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/i
 Pin a release:
 
 ```bash
-TERMVOX_VERSION=v0.1.0-alpha.15 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
+TERMVOX_VERSION=v0.1.0-alpha.16 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
 ```
 
 **From source** — install [Rust 1.88 or later](https://www.rust-lang.org/tools/install), audio

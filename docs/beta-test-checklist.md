@@ -20,7 +20,7 @@ Fill in before testing:
 ## Install path
 
 - [ ] `npm install -g termvox` (or script installer) completed without errors
-- [ ] `termvox --version` prints `0.1.0-alpha.15` or newer
+- [ ] `termvox --version` prints `0.1.0-alpha.16` or newer
 - [ ] `termvox doctor` shows `[ok]` for **microphone** and **speech/whisper**
 - [ ] At least one agent line shows `[ok]` (not `[--]` or `[!!]`)
 

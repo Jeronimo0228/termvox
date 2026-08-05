@@ -1,20 +1,18 @@
-## TermVox v0.1.0-alpha.15 — CI green, shell TUI stability
+## TermVox v0.1.0-alpha.16 — STT docs, rich CLI help, demo tooling
 
-Pin: `TERMVOX_VERSION=v0.1.0-alpha.15`
+Pin: `TERMVOX_VERSION=v0.1.0-alpha.16`
 
-### What's new in alpha.15
+### What's new in alpha.16
 
-- Fix CI: rustfmt + clippy on session store (cast truncation)
-- Suppress Whisper/ggml AMX stderr so OpenCode TUI stays clean in `termvox shell`
-- Defer Whisper prewarm until first voice toggle in shell mode
-- `termvox shell --fresh` skips mid-session discovery
-- Workspace sessions scoped per project **and** per agent (`session.json` v2)
+- STT documentation: performance profiles, VAD tuning, model install, Spanish guide
+- Richer CLI `--help` / `termvox manpage` (shell, models, config, doctor, STT tips)
+- LinkedIn demo render script: `scripts/render-linkedin-demo.py`
 
 ### Upgrade
 
 ```bash
 npm install -g termvox@latest
 # or
-TERMVOX_VERSION=v0.1.0-alpha.15 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
+TERMVOX_VERSION=v0.1.0-alpha.16 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
 termvox doctor
 ```

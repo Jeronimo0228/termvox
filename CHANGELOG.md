@@ -10,6 +10,8 @@ in minor or patch increments and must be called out explicitly.
 
 ## [Unreleased]
 
+## [0.1.0-alpha.16] - 2026-08-05
+
 ### Added
 
 - STT documentation: performance profiles, VAD tuning, model install, Spanish guide
@@ -25,6 +27,7 @@ in minor or patch increments and must be called out explicitly.
 - Make `gag` optional with the `embedded-whisper` feature
 - Docs: session.json v2 / per-agent resume wording; release notes for alpha.15
 
+[0.1.0-alpha.16]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.15...v0.1.0-alpha.16
 [0.1.0-alpha.15]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.14...v0.1.0-alpha.15
 
 ## [0.1.0-alpha.14] - 2026-08-05
@@ -157,7 +160,7 @@ in minor or patch increments and must be called out explicitly.
 - Mic bar redraw during transcribing and after upstream TUI repaints
 - Clippy and docs for workspace session store APIs
 
-[Unreleased]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.15...main
+[Unreleased]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.16...main
 [0.1.0-alpha.8]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.7...v0.1.0-alpha.8
 [0.1.0-alpha.7]: https://github.com/Jeronimo0228/termvox/compare/v0.1.0-alpha.6...v0.1.0-alpha.7
 

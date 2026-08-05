@@ -1,6 +1,6 @@
 # Inicio rápido
 
-TermVox **0.1.0-alpha.15** está disponible en [npm](https://www.npmjs.com/package/termvox)
+TermVox **0.1.0-alpha.16** está disponible en [npm](https://www.npmjs.com/package/termvox)
 y como binarios precompilados para Linux, macOS y Windows en
 [GitHub Releases](https://github.com/Jeronimo0228/termvox/releases). También puedes
 compilar desde el código fuente.
@@ -24,7 +24,7 @@ curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/i
 Versión fija:
 
 ```bash
-TERMVOX_VERSION=v0.1.0-alpha.15 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
+TERMVOX_VERSION=v0.1.0-alpha.16 curl -fsSL https://raw.githubusercontent.com/Jeronimo0228/termvox/main/scripts/install.sh | bash
 ```
 
 **Desde fuente:**

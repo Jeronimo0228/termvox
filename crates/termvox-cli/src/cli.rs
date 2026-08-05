@@ -86,9 +86,11 @@ Otherwise starts the push-to-talk UI (Space by default).")]
         runs: u32,
     },
     /// Diagnose mic, speech engine, config, and agent CLIs
-    #[command(long_about = "Print readiness checks for microphone, Whisper/model path,\n\
+    #[command(
+        long_about = "Print readiness checks for microphone, Whisper/model path,\n\
 configuration, and each supported agent (installed + auth).\n\n\
-Use --json for scripting. See also: termvox config show")]
+Use --json for scripting. See also: termvox config show"
+    )]
     Doctor {
         /// Emit machine-readable JSON (includes hints)
         #[arg(long)]
@@ -151,14 +153,16 @@ Docs: docs/performance.md · docs/es/stt.md")]
         #[arg(long, value_name = "PATH")]
         output: Option<PathBuf>,
     },
-    /// Integrated agent TUI + TermVox mic bar (recommended)
-    #[command(long_about = "Launch a coding-agent CLI inside a PTY with a persistent mic bar.\n\n\
+    /// Integrated agent TUI + `TermVox` mic bar (recommended)
+    #[command(
+        long_about = "Launch a coding-agent CLI inside a PTY with a persistent mic bar.\n\n\
 Voice: F8 or Ctrl+Space (Wayland). Exit wrapper: Ctrl+\\ (Ctrl+C goes to the agent).\n\
 --fresh starts without resuming a saved workspace session.\n\n\
 STT uses your termvox.toml speech settings. For better accuracy:\n\
   termvox models install accurate\n\
   performance_profile = \"balanced\"\n\
-See docs/agent-shell.md and docs/es/stt.md.")]
+See docs/agent-shell.md and docs/es/stt.md."
+    )]
     Shell {
         /// Agent override: cursor, opencode, claude, codex, gemini, aider, amp
         #[arg(long, value_name = "AGENT")]
